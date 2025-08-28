@@ -3,219 +3,346 @@
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import { useForm } from "react-hook-form"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { MainLayout } from "@/components/main-layout"
-import { Github, Star, GitFork, ExternalLink } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
+import { updateProfile } from "@/lib/actions"
+import { validateUsername } from "@/lib/utils"
+import { ProfileFormData } from "@/types"
 import toast from "react-hot-toast"
+import { X, Plus, CheckCircle } from "lucide-react"
+import { DevLinkLogo } from "@/components/devlink-logo"
 
-interface GitHubRepo {
-  id: number
-  name: string
-  description: string
-  html_url: string
-  homepage: string
-  language: string
-  stargazers_count: number
-  fork: boolean
-  updated_at: string
-}
+const commonSkills = [
+  "React", "TypeScript", "JavaScript", "Node.js", "Python", "Java", "Go", "Rust",
+  "Vue.js", "Angular", "Svelte", "Next.js", "Nuxt.js", "Express.js", "FastAPI",
+  "PostgreSQL", "MongoDB", "MySQL", "Redis", "GraphQL", "REST API",
+  "AWS", "Azure", "GCP", "Docker", "Kubernetes", "Terraform",
+  "Git", "GitHub", "GitLab", "CI/CD", "Jest", "Cypress"
+]
 
 export default function SetupPage() {
-  const { data: session, status } = useSession()
+  const { data: session, status, update } = useSession()
   const router = useRouter()
-  const [repos, setRepos] = useState<GitHubRepo[]>([])
-  const [selectedRepos, setSelectedRepos] = useState<number[]>([])
-  const [loading, setLoading] = useState(true)
-  const [importing, setImporting] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [skills, setSkills] = useState<string[]>([])
+  const [newSkill, setNewSkill] = useState("")
+  const [usernameError, setUsernameError] = useState("")
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors }
+  } = useForm<ProfileFormData>({
+    defaultValues: {
+      name: "",
+      username: "",
+      bio: "",
+      location: "",
+      website: "",
+      github: "",
+      twitter: "",
+      linkedin: "",
+      skills: [],
+      isAvailableForWork: false
+    }
+  })
+
+  const watchedUsername = watch("username")
 
   useEffect(() => {
-    if (status === "authenticated" && session?.user) {
-      fetchRepos()
-    } else if (status === "unauthenticated") {
+    if (status === "loading") return
+    if (!session) {
       router.push("/login")
-    }
-  }, [session, status, router])
-
-  const fetchRepos = async () => {
-    try {
-      const response = await fetch("/api/github/repos")
-      if (response.ok) {
-        const data = await response.json()
-        setRepos(data.repos || [])
-      } else {
-        toast.error("Failed to fetch repositories")
-      }
-    } catch (error) {
-      toast.error("Error fetching repositories")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleRepoToggle = (repoId: number) => {
-    setSelectedRepos(prev => {
-      if (prev.includes(repoId)) {
-        return prev.filter(id => id !== repoId)
-      } else if (prev.length < 10) {
-        return [...prev, repoId]
-      } else {
-        toast.error("You can select maximum 10 repositories")
-        return prev
-      }
-    })
-  }
-
-  const handleImport = async () => {
-    if (selectedRepos.length === 0) {
-      toast.error("Please select at least one repository")
       return
     }
 
-    setImporting(true)
-    try {
-      const response = await fetch("/api/github/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ repoIds: selectedRepos })
-      })
-
-      if (response.ok) {
-        toast.success("Repositories imported successfully!")
+    // Pre-fill form with session data
+    if (session.user) {
+      setValue("name", session.user.name || "")
+      setValue("username", session.user.username || "")
+      // If user already has a username, redirect to dashboard
+      if (session.user.username) {
         router.push("/dashboard")
-      } else {
-        toast.error("Failed to import repositories")
       }
+    }
+  }, [session, status, router, setValue])
+
+  useEffect(() => {
+    if (watchedUsername && watchedUsername.length >= 3) {
+      if (!validateUsername(watchedUsername)) {
+        setUsernameError("Username must be 3-20 characters, letters, numbers, and underscores only")
+      } else {
+        setUsernameError("")
+      }
+    } else if (watchedUsername) {
+      setUsernameError("Username must be at least 3 characters")
+    } else {
+      setUsernameError("")
+    }
+  }, [watchedUsername])
+
+  const addSkill = (skill: string) => {
+    const trimmedSkill = skill.trim()
+    if (trimmedSkill && !skills.includes(trimmedSkill)) {
+      const newSkills = [...skills, trimmedSkill]
+      setSkills(newSkills)
+      setValue("skills", newSkills)
+    }
+    setNewSkill("")
+  }
+
+  const removeSkill = (skillToRemove: string) => {
+    const newSkills = skills.filter(skill => skill !== skillToRemove)
+    setSkills(newSkills)
+    setValue("skills", newSkills)
+  }
+
+  const onSubmit = async (data: ProfileFormData) => {
+    if (usernameError) {
+      toast.error("Please fix the username error")
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      await updateProfile({ ...data, skills })
+      await update() // Refresh session
+      toast.success("Profile setup completed!")
+      router.push("/dashboard")
     } catch (error) {
-      toast.error("Error importing repositories")
+      toast.error(error instanceof Error ? error.message : "Failed to update profile")
     } finally {
-      setImporting(false)
+      setIsLoading(false)
     }
   }
 
-  const handleSkip = () => {
-    router.push("/dashboard")
-  }
-
-  if (status === "loading" || loading) {
+  if (status === "loading") {
     return (
-      <MainLayout>
-        <div className="container max-w-4xl py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>Loading your repositories...</p>
-          </div>
-        </div>
-      </MainLayout>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
     )
   }
 
   return (
-    <MainLayout>
-      <div className="container max-w-4xl py-12">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+      <div className="container max-w-2xl py-12">
         <div className="text-center mb-8">
-          <div className="h-16 w-16 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center mx-auto mb-4">
-            <Github className="h-8 w-8 text-white" />
+          <div className="mx-auto mb-4">
+            <DevLinkLogo size="lg" />
           </div>
-          <h1 className="text-3xl font-bold mb-2">Welcome to DevLink!</h1>
-          <p className="text-muted-foreground text-lg">
-            Select up to 10 repositories to showcase as projects on your profile
+          <h1 className="text-3xl font-bold mb-2">Complete Your Profile</h1>
+          <p className="text-muted-foreground">
+            Let's set up your developer profile so others can discover your work
           </p>
         </div>
 
-        <Card className="mb-6">
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Your GitHub Repositories</span>
-              <Badge variant="secondary">
-                {selectedRepos.length}/10 selected
-              </Badge>
-            </CardTitle>
+            <CardTitle>Profile Information</CardTitle>
+            <CardDescription>
+              This information will be displayed on your public profile
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            {repos.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                No repositories found or repositories are private
-              </p>
-            ) : (
-              <div className="space-y-4 max-h-96 overflow-y-auto">
-                {repos.map((repo) => (
-                  <div
-                    key={repo.id}
-                    className={`flex items-start space-x-3 p-4 border rounded-lg cursor-pointer transition-colors ${
-                      selectedRepos.includes(repo.id)
-                        ? "border-primary bg-primary/5"
-                        : "hover:bg-muted/50"
-                    }`}
-                    onClick={() => handleRepoToggle(repo.id)}
-                  >
-                    <div className={`h-4 w-4 rounded border-2 flex items-center justify-center ${
-                      selectedRepos.includes(repo.id) 
-                        ? 'bg-primary border-primary text-primary-foreground' 
-                        : 'border-muted-foreground'
-                    }`}>
-                      {selectedRepos.includes(repo.id) && (
-                        <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-medium truncate">{repo.name}</h3>
-                        {repo.fork && <GitFork className="h-4 w-4 text-muted-foreground" />}
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Star className="h-3 w-3" />
-                          <span>{repo.stargazers_count}</span>
-                        </div>
-                      </div>
-                      {repo.description && (
-                        <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                          {repo.description}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-2">
-                        {repo.language && (
-                          <Badge variant="outline" className="text-xs">
-                            {repo.language}
-                          </Badge>
-                        )}
-                        <span className="text-xs text-muted-foreground">
-                          Updated {new Date(repo.updated_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      asChild
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <a href={repo.html_url} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    </Button>
-                  </div>
-                ))}
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              {/* Basic Info */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name *</Label>
+                  <Input
+                    id="name"
+                    {...register("name", { required: "Name is required" })}
+                    placeholder="John Doe"
+                  />
+                  {errors.name && (
+                    <p className="text-sm text-red-500">{errors.name.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username *</Label>
+                  <Input
+                    id="username"
+                    {...register("username", { 
+                      required: "Username is required",
+                      validate: (value) => validateUsername(value) || "Invalid username format"
+                    })}
+                    placeholder="johndoe"
+                  />
+                  {(errors.username || usernameError) && (
+                    <p className="text-sm text-red-500">
+                      {errors.username?.message || usernameError}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    This will be your profile URL: devlink.com/{watchedUsername || "username"}
+                  </p>
+                </div>
               </div>
-            )}
+
+              <div className="space-y-2">
+                <Label htmlFor="bio">Bio</Label>
+                <Textarea
+                  id="bio"
+                  {...register("bio")}
+                  placeholder="Tell us about yourself, your experience, and what you're passionate about..."
+                  rows={3}
+                />
+                <p className="text-xs text-muted-foreground">
+                  A good bio helps others understand your background and interests
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  id="location"
+                  {...register("location")}
+                  placeholder="San Francisco, CA"
+                />
+              </div>
+
+              {/* Skills */}
+              <div className="space-y-4">
+                <div>
+                  <Label>Skills</Label>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Add your technical skills to help others find you
+                  </p>
+                </div>
+
+                <div className="flex gap-2">
+                  <Input
+                    value={newSkill}
+                    onChange={(e) => setNewSkill(e.target.value)}
+                    placeholder="Add a skill..."
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault()
+                        addSkill(newSkill)
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => addSkill(newSkill)}
+                    disabled={!newSkill.trim()}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* Common Skills */}
+                <div>
+                  <p className="text-sm font-medium mb-2">Popular skills:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {commonSkills.filter(skill => !skills.includes(skill)).slice(0, 12).map((skill) => (
+                      <Button
+                        key={skill}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addSkill(skill)}
+                        className="text-xs"
+                      >
+                        {skill}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Selected Skills */}
+                {skills.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium mb-2">Your skills:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {skills.map((skill) => (
+                        <Badge key={skill} variant="secondary" className="gap-1">
+                          {skill}
+                          <button
+                            type="button"
+                            onClick={() => removeSkill(skill)}
+                            className="hover:text-red-500"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Social Links */}
+              <div className="space-y-4">
+                <Label>Social Links (Optional)</Label>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="github">GitHub</Label>
+                    <Input
+                      id="github"
+                      {...register("github")}
+                      placeholder="https://github.com/username"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="website">Website</Label>
+                    <Input
+                      id="website"
+                      {...register("website")}
+                      placeholder="https://yourwebsite.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="twitter">Twitter</Label>
+                    <Input
+                      id="twitter"
+                      {...register("twitter")}
+                      placeholder="https://twitter.com/username"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="linkedin">LinkedIn</Label>
+                    <Input
+                      id="linkedin"
+                      {...register("linkedin")}
+                      placeholder="https://linkedin.com/in/username"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Availability */}
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="space-y-1">
+                  <Label htmlFor="available">Available for Work</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Let others know if you're open to new opportunities
+                  </p>
+                </div>
+                <Switch
+                  id="available"
+                  {...register("isAvailableForWork")}
+                />
+              </div>
+
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Setting up..." : "Complete Setup"}
+              </Button>
+            </form>
           </CardContent>
         </Card>
-
-        <div className="flex justify-center gap-4">
-          <Button variant="outline" onClick={handleSkip}>
-            Skip for now
-          </Button>
-          <Button 
-            onClick={handleImport} 
-            disabled={importing || selectedRepos.length === 0}
-          >
-            {importing ? "Importing..." : `Import ${selectedRepos.length} repositories`}
-          </Button>
-        </div>
       </div>
-    </MainLayout>
+    </div>
   )
 }

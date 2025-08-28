@@ -2,7 +2,9 @@
 const nextConfig = {
   experimental: {
     serverActions: {
-      allowedOrigins: ["localhost:3000"],
+      allowedOrigins: process.env.NODE_ENV === 'production' 
+        ? [process.env.NEXTAUTH_URL?.replace('https://', '') || 'devlink.vercel.app']
+        : ["localhost:3000"],
     },
   },
   images: {
@@ -33,6 +35,10 @@ const nextConfig = {
       },
     ],
   },
+  // Optimize for production
+  swcMinify: true,
+  compress: true,
+  poweredByHeader: false,
 };
 
 module.exports = nextConfig;

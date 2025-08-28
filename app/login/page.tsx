@@ -8,6 +8,7 @@ import { Github, Chrome, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import toast from "react-hot-toast"
+import { DevLinkLogo } from "@/components/devlink-logo"
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -67,9 +68,7 @@ export default function LoginPage() {
         <Card className="w-full max-w-md mx-auto shadow-2xl border-0 bg-card/95 backdrop-blur-sm">
           <CardHeader className="space-y-1 text-center">
             <div className="mx-auto mb-4">
-              <div className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center mx-auto">
-                <span className="text-white font-bold text-lg">DL</span>
-              </div>
+              <DevLinkLogo size="md" />
             </div>
             <CardTitle className="text-2xl font-bold">Welcome to DevLink</CardTitle>
             <CardDescription>

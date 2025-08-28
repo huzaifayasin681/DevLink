@@ -1,382 +1,351 @@
 import { redirect } from "next/navigation"
 import { getServerSession } from "next-auth"
 import Link from "next/link"
-import { 
-  User, 
-  Settings, 
-  FolderOpen, 
-  FileText, 
-  BarChart3,
-  Plus,
-  Eye,
-  ExternalLink,
-  Calendar
-} from "lucide-react"
+import { Plus, User, Code2, FileText, Eye, TrendingUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { MainLayout } from "@/components/main-layout"
+import { AnimatedCounter } from "@/components/animated-counter"
 import { authOptions } from "@/lib/auth"
-import { getInitials, formatDate } from "@/lib/utils"
+import { db } from "@/lib/db"
 
-async function getCurrentUser() {
-  const session = await getServerSession(authOptions)
-  return session?.user
-}
+async function getDashboardData(userId: string) {
+  try {
+    const [user, projects, blogPosts] = await Promise.all([
+      db.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          email: true,
+          image: true,
+          bio: true,
+          skills: true,
+          isAvailableForWork: true,
+          createdAt: true,
+        }
+      }),
+      db.project.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          technologies: true,
+          featured: true,
+          createdAt: true,
+        }
+      }),
+      db.blogPost.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        select: {
+          id: true,
+          title: true,
+          excerpt: true,
+          published: true,
+          createdAt: true,
+        }
+      })
+    ])
 
-async function getUserData(userId: string) {
-  const { db } = await import("@/lib/db")
-  
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    include: {
-      projects: {
-        orderBy: { createdAt: "desc" }
-      },
-      posts: {
-        where: { published: true },
-        orderBy: { createdAt: "desc" }
+    const stats = await Promise.all([
+      db.project.count({ where: { userId } }),
+      db.blogPost.count({ where: { userId, published: true } }),
+      db.blogPost.count({ where: { userId } })
+    ])
+
+    return {
+      user,
+      projects,
+      blogPosts,
+      stats: {
+        projects: stats[0],
+        publishedPosts: stats[1],
+        totalPosts: stats[2]
       }
     }
-  })
-  
-  if (!user) {
-    throw new Error("User not found")
-  }
-  
-  return {
-    ...user,
-    stats: {
-      profileViews: Math.floor(Math.random() * 1000), // Mock analytics data
-      projectViews: Math.floor(Math.random() * 5000),
-      totalViews: Math.floor(Math.random() * 10000)
+  } catch (error) {
+    console.error('Dashboard data fetch error:', error)
+    return {
+      user: null,
+      projects: [],
+      blogPosts: [],
+      stats: { projects: 0, publishedPosts: 0, totalPosts: 0 }
     }
   }
 }
 
 export default async function DashboardPage() {
-  const user = await getCurrentUser()
+  const session = await getServerSession(authOptions)
   
+  if (!session?.user?.id) {
+    redirect("/login")
+  }
+
+  const { user, projects, blogPosts, stats } = await getDashboardData(session.user.id)
+
   if (!user) {
     redirect("/login")
   }
 
-  const userData = await getUserData(user.id)
-  const publishedPosts = userData.posts.filter(post => post.published)
-  const draftPosts = userData.posts.filter(post => !post.published)
-  const featuredProjects = userData.projects.filter(project => project.featured)
+  const needsSetup = !user.username || !user.bio || user.skills.length === 0
 
   return (
     <MainLayout>
       <div className="container py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">Dashboard</h1>
-            <p className="text-muted-foreground">
-              Manage your profile, projects, and content
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button variant="outline" asChild>
-              <Link href={`/${userData.username}`}>
-                <Eye className="h-4 w-4 mr-2" />
-                View Profile
-              </Link>
-            </Button>
-            <Button asChild>
-              <Link href="/dashboard/profile">
-                <Settings className="h-4 w-4 mr-2" />
-                Edit Profile
-              </Link>
-            </Button>
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Dashboard</h1>
+              <p className="text-muted-foreground">
+                Welcome back, {user.name || user.email}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {user.username && (
+                <Button variant="outline" asChild>
+                  <Link href={`/${user.username}`}>
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Profile
+                  </Link>
+                </Button>
+              )}
+              <Button asChild>
+                <Link href="/dashboard/profile">
+                  <User className="h-4 w-4 mr-2" />
+                  Edit Profile
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Profile Views</CardTitle>
-              <Eye className="h-4 w-4 text-muted-foreground" />
+        {/* Setup Alert */}
+        {needsSetup && (
+          <Card className="mb-8 border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20">
+            <CardHeader>
+              <CardTitle className="text-orange-800 dark:text-orange-200">
+                Complete Your Profile
+              </CardTitle>
+              <CardDescription className="text-orange-700 dark:text-orange-300">
+                Your profile is incomplete. Add a username, bio, and skills to get discovered by other developers.
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{userData.stats.profileViews.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">
-                +12% from last month
-              </p>
+              <Button asChild>
+                <Link href="/dashboard/profile">
+                  Complete Profile Setup
+                </Link>
+              </Button>
             </CardContent>
           </Card>
-          
+        )}
+
+        {/* Stats */}
+        <div className="grid gap-6 md:grid-cols-3 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Projects</CardTitle>
-              <FolderOpen className="h-4 w-4 text-muted-foreground" />
+              <Code2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{userData.projects.length}</div>
+              <div className="text-2xl font-bold">
+                <AnimatedCounter value={stats.projects} />
+              </div>
               <p className="text-xs text-muted-foreground">
-                {featuredProjects.length} featured
+                Total projects created
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Articles</CardTitle>
+              <CardTitle className="text-sm font-medium">Published Posts</CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{publishedPosts.length}</div>
+              <div className="text-2xl font-bold">
+                <AnimatedCounter value={stats.publishedPosts} />
+              </div>
               <p className="text-xs text-muted-foreground">
-                {draftPosts.length} drafts
+                Blog posts published
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Views</CardTitle>
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Profile Views</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{userData.stats.totalViews.toLocaleString()}</div>
+              <div className="text-2xl font-bold">
+                <AnimatedCounter value={0} />
+              </div>
               <p className="text-xs text-muted-foreground">
-                +8% from last month
+                Coming soon
               </p>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-8">
-            {/* Recent Projects */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Recent Projects</CardTitle>
-                  <CardDescription>Your latest project work</CardDescription>
-                </div>
-                <Button asChild>
-                  <Link href="/dashboard/projects/new">
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Project
+        <div className="grid gap-8 md:grid-cols-2">
+          {/* Recent Projects */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Recent Projects</CardTitle>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/dashboard/projects">
+                    View All
                   </Link>
                 </Button>
-              </CardHeader>
-              <CardContent>
-                {userData.projects.length > 0 ? (
-                  <div className="space-y-4">
-                    {userData.projects.map((project) => (
-                      <div key={project.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-medium">{project.title}</h4>
-                            {project.featured && (
-                              <Badge variant="secondary" className="text-xs">
-                                Featured
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {project.description}
-                          </p>
-                          <div className="flex gap-1">
-                            {project.technologies.slice(0, 3).map((tech) => (
-                              <Badge key={tech} variant="outline" className="text-xs">
-                                {tech}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button size="sm" variant="outline" asChild>
-                            <Link href={`/dashboard/projects/${project.id}`}>
-                              Edit
-                            </Link>
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                    <Button variant="outline" className="w-full" asChild>
-                      <Link href="/dashboard/projects">
-                        View All Projects ({userData.projects.length})
-                      </Link>
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <FolderOpen className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-muted-foreground">No projects yet</p>
-                    <Button className="mt-2" asChild>
-                      <Link href="/dashboard/projects/new">
-                        Create Your First Project
-                      </Link>
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Recent Articles */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Recent Articles</CardTitle>
-                  <CardDescription>Your latest blog posts</CardDescription>
-                </div>
-                <Button asChild>
-                  <Link href="/dashboard/blog/new">
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Article
-                  </Link>
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {userData.posts.length > 0 ? (
-                  <div className="space-y-4">
-                    {userData.posts.map((post) => (
-                      <div key={post.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-medium">{post.title}</h4>
-                            <Badge 
-                              variant={post.published ? "success" : "secondary"} 
-                              className="text-xs"
-                            >
-                              {post.published ? "Published" : "Draft"}
+              </div>
+              <CardDescription>
+                Your latest project work
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {projects.length > 0 ? (
+                <div className="space-y-4">
+                  {projects.map((project) => (
+                    <div key={project.id} className="flex items-start justify-between p-3 rounded-lg border">
+                      <div className="space-y-1">
+                        <h4 className="font-medium">{project.title}</h4>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {project.description}
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {project.technologies.slice(0, 3).map((tech) => (
+                            <Badge key={tech} variant="outline" className="text-xs">
+                              {tech}
                             </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {post.excerpt}
-                          </p>
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            <span>{formatDate(post.createdAt)}</span>
-                            <span>{post.readingTime} min read</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button size="sm" variant="outline" asChild>
-                            <Link href={`/dashboard/blog/${post.id}`}>
-                              Edit
-                            </Link>
-                          </Button>
+                          ))}
+                          {project.technologies.length > 3 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{project.technologies.length - 3}
+                            </Badge>
+                          )}
                         </div>
                       </div>
-                    ))}
-                    <Button variant="outline" className="w-full" asChild>
-                      <Link href="/dashboard/blog">
-                        View All Articles ({userData.posts.length})
-                      </Link>
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-muted-foreground">No articles yet</p>
-                    <Button className="mt-2" asChild>
-                      <Link href="/dashboard/blog/new">
-                        Write Your First Article
-                      </Link>
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                      {project.featured && (
+                        <Badge variant="secondary" className="text-xs">
+                          Featured
+                        </Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Code2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="font-medium mb-2">No projects yet</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Start showcasing your work by creating your first project.
+                  </p>
+                  <Button asChild>
+                    <Link href="/dashboard/projects/new">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Project
+                    </Link>
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-          {/* Sidebar */}
-          <aside className="space-y-6">
-            {/* Profile Preview */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Profile Preview</CardTitle>
-                <CardDescription>How others see your profile</CardDescription>
-              </CardHeader>
-              <CardContent className="text-center space-y-4">
-                <Avatar className="h-20 w-20 mx-auto">
-                  <AvatarImage src={userData.image || ""} alt={userData.name || ""} />
-                  <AvatarFallback className="text-lg">{getInitials(userData.name || "")}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-medium">{userData.name}</h3>
-                  <p className="text-sm text-muted-foreground">@{userData.username}</p>
-                  {userData.isAvailableForWork && (
-                    <Badge variant="success" className="mt-2">
-                      Available for work
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground">{userData.bio}</p>
-                <Button variant="outline" className="w-full" asChild>
-                  <Link href={`/${userData.username}`}>
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    View Public Profile
+          {/* Recent Blog Posts */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Recent Blog Posts</CardTitle>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/dashboard/blog">
+                    View All
                   </Link>
                 </Button>
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start" asChild>
-                  <Link href="/dashboard/profile">
-                    <User className="h-4 w-4 mr-2" />
-                    Edit Profile
-                  </Link>
-                </Button>
-                <Button variant="outline" className="w-full justify-start" asChild>
-                  <Link href="/dashboard/projects/new">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Project
-                  </Link>
-                </Button>
-                <Button variant="outline" className="w-full justify-start" asChild>
-                  <Link href="/dashboard/blog/new">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Write Article
-                  </Link>
-                </Button>
-                <Button variant="outline" className="w-full justify-start" asChild>
-                  <Link href="/dashboard/analytics">
-                    <BarChart3 className="h-4 w-4 mr-2" />
-                    View Analytics
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Account Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Account Info</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Member Since</span>
-                  <span>{formatDate(userData.createdAt)}</span>
+              </div>
+              <CardDescription>
+                Your latest articles and thoughts
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {blogPosts.length > 0 ? (
+                <div className="space-y-4">
+                  {blogPosts.map((post) => (
+                    <div key={post.id} className="flex items-start justify-between p-3 rounded-lg border">
+                      <div className="space-y-1">
+                        <h4 className="font-medium">{post.title}</h4>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {post.excerpt}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(post.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Badge variant={post.published ? "default" : "secondary"} className="text-xs">
+                        {post.published ? "Published" : "Draft"}
+                      </Badge>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Projects</span>
-                  <span>{userData.projects.length}</span>
+              ) : (
+                <div className="text-center py-8">
+                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="font-medium mb-2">No blog posts yet</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Share your knowledge and experiences with the community.
+                  </p>
+                  <Button asChild>
+                    <Link href="/dashboard/blog/new">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Write Post
+                    </Link>
+                  </Button>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Articles</span>
-                  <span>{publishedPosts.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Skills</span>
-                  <span>{userData.skills.length}</span>
-                </div>
-              </CardContent>
-            </Card>
-          </aside>
+              )}
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Quick Actions */}
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>
+              Common tasks to help you get started
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-3">
+              <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2" asChild>
+                <Link href="/dashboard/projects/new">
+                  <Plus className="h-6 w-6" />
+                  <span>New Project</span>
+                </Link>
+              </Button>
+              <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2" asChild>
+                <Link href="/dashboard/blog/new">
+                  <FileText className="h-6 w-6" />
+                  <span>Write Blog Post</span>
+                </Link>
+              </Button>
+              <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2" asChild>
+                <Link href="/dashboard/profile">
+                  <User className="h-6 w-6" />
+                  <span>Edit Profile</span>
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </MainLayout>
   )

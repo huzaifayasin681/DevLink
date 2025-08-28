@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { User, Settings, LogOut, PlusCircle, Search } from "lucide-react"
 import { getInitials } from "@/lib/utils"
+import { DevLinkLogo } from "@/components/devlink-logo"
 
 export function Header() {
   const { data: session, status } = useSession()
@@ -22,11 +23,8 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center">
         <div className="mr-4 flex">
-          <Link href="/" className="mr-6 flex items-center space-x-2">
-            <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center">
-              <span className="text-white font-bold text-sm">DL</span>
-            </div>
-            <span className="hidden font-bold sm:inline-block">DevLink</span>
+          <Link href="/" className="mr-6">
+            <DevLinkLogo size="sm" />
           </Link>
         </div>
 

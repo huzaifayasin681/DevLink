@@ -106,3 +106,14 @@
 .dark .bg-grid-pattern {
   background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0);
 }
+
+/* DevLink Logo Animations */
+@keyframes slide {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(400%); }
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}

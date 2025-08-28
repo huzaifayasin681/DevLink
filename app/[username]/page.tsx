@@ -1,339 +1,362 @@
-import React from "react"
 import { notFound } from "next/navigation"
-import { Metadata } from "next"
 import Link from "next/link"
-import Image from "next/image"
-import { 
-  MapPin, 
-  Globe, 
-  Github, 
-  Twitter, 
-  Linkedin, 
-  Mail,
-  Calendar,
-  ExternalLink,
-  Star,
-  Clock,
-  Grid3X3,
-  Grid2X2,
-  List
-} from "lucide-react"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
+import { MapPin, Globe, Github, Twitter, Linkedin, Calendar, Briefcase, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { MainLayout } from "@/components/main-layout"
+import { FadeIn } from "@/components/fade-in"
+import { db } from "@/lib/db"
 import { getInitials, formatDate } from "@/lib/utils"
 
-interface ProfilePageProps {
+interface UserProfilePageProps {
   params: {
     username: string
   }
 }
 
-async function getProfile(username: string) {
-  const { db } = await import("@/lib/db")
-  
-  const user = await db.user.findUnique({
-    where: { username },
-    include: {
-      projects: {
-        orderBy: { createdAt: "desc" }
-      },
-      posts: {
-        where: { published: true },
-        orderBy: { createdAt: "desc" }
-      },
-      _count: {
-        select: {
-          projects: true,
-          posts: { where: { published: true } }
+async function getUserProfile(username: string) {
+  try {
+    const user = await db.user.findUnique({
+      where: { username },
+      include: {
+        projects: {
+          where: { featured: true },
+          orderBy: { createdAt: 'desc' },
+          take: 6
+        },
+        posts: {
+          where: { published: true },
+          orderBy: { createdAt: 'desc' },
+          take: 3,
+          select: {
+            id: true,
+            title: true,
+            excerpt: true,
+            slug: true,
+            createdAt: true,
+            readingTime: true
+          }
+        },
+        _count: {
+          select: {
+            projects: true,
+            posts: { where: { published: true } }
+          }
         }
       }
-    }
-  })
+    })
 
-  return user
+    return user
+  } catch (error) {
+    console.error('Error fetching user profile:', error)
+    return null
+  }
 }
 
-export async function generateMetadata({ params }: ProfilePageProps): Promise<Metadata> {
-  const profile = await getProfile(params.username)
+export async function generateMetadata({ params }: UserProfilePageProps) {
+  const user = await getUserProfile(params.username)
   
-  if (!profile) {
+  if (!user) {
     return {
-      title: "Profile Not Found | DevLink"
+      title: 'User Not Found | DevLink'
     }
   }
 
   return {
-    title: `${profile.name} (@${profile.username}) | DevLink`,
-    description: profile.bio,
+    title: `${user.name} (@${user.username}) | DevLink`,
+    description: user.bio || `Check out ${user.name}'s developer profile on DevLink`,
+    openGraph: {
+      title: `${user.name} (@${user.username})`,
+      description: user.bio || `Check out ${user.name}'s developer profile on DevLink`,
+      images: user.image ? [user.image] : [],
+    },
   }
 }
 
-export default async function ProfilePage({ params }: ProfilePageProps) {
-  const profile = await getProfile(params.username)
+export default async function UserProfilePage({ params }: UserProfilePageProps) {
+  const user = await getUserProfile(params.username)
 
-  if (!profile) {
+  if (!user) {
     notFound()
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col">
-      <Header />
-      <main className="flex-1">
-        <div className="container py-8">
-          {/* Hero Section */}
-          <div className="mb-12">
-            <div className="flex flex-col md:flex-row md:items-start gap-8">
-              <Avatar className="h-32 w-32">
-                <AvatarImage src={profile.image || ""} alt={profile.name || ""} />
-                <AvatarFallback className="text-4xl">{getInitials(profile.name || "")}</AvatarFallback>
-              </Avatar>
-              
-              <div className="flex-1">
-                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                  <div>
-                    <h1 className="text-4xl font-bold mb-2">{profile.name}</h1>
-                    <p className="text-xl text-muted-foreground mb-4">@{profile.username}</p>
-                    {profile.bio && (
-                      <p className="text-lg text-muted-foreground mb-4">{profile.bio}</p>
-                    )}
-                    
-                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-4">
-                      {profile.location && (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-4 w-4" />
-                          <span>{profile.location}</span>
-                        </div>
+    <MainLayout>
+      <div className="container py-8">
+        {/* Profile Header */}
+        <FadeIn>
+          <Card className="mb-8">
+            <CardContent className="pt-6">
+              <div className="flex flex-col md:flex-row gap-6">
+                <Avatar className="h-32 w-32 mx-auto md:mx-0">
+                  <AvatarImage src={user.image || ""} alt={user.name || ""} />
+                  <AvatarFallback className="text-2xl">
+                    {getInitials(user.name || "")}
+                  </AvatarFallback>
+                </Avatar>
+
+                <div className="flex-1 text-center md:text-left">
+                  <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-4">
+                    <div>
+                      <h1 className="text-3xl font-bold mb-2">{user.name}</h1>
+                      <p className="text-muted-foreground text-lg mb-2">@{user.username}</p>
+                      {user.isAvailableForWork && (
+                        <Badge variant="success" className="mb-4">
+                          <Briefcase className="h-3 w-3 mr-1" />
+                          Available for work
+                        </Badge>
                       )}
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        <span>Joined {formatDate(profile.createdAt)}</span>
-                      </div>
                     </div>
-                    
-                    {/* Social Links */}
-                    <div className="flex gap-3">
-                      {profile.website && (
-                        <Button size="sm" variant="outline" asChild>
-                          <Link href={profile.website} target="_blank" rel="noopener noreferrer">
-                            <Globe className="h-4 w-4 mr-2" />
-                            Website
-                          </Link>
-                        </Button>
-                      )}
-                      {profile.github && (
-                        <Button size="sm" variant="outline" asChild>
-                          <Link href={profile.github} target="_blank" rel="noopener noreferrer">
-                            <Github className="h-4 w-4 mr-2" />
-                            GitHub
-                          </Link>
-                        </Button>
-                      )}
-                      {profile.twitter && (
-                        <Button size="sm" variant="outline" asChild>
-                          <Link href={profile.twitter} target="_blank" rel="noopener noreferrer">
-                            <Twitter className="h-4 w-4 mr-2" />
-                            Twitter
-                          </Link>
-                        </Button>
-                      )}
-                      {profile.linkedin && (
-                        <Button size="sm" variant="outline" asChild>
-                          <Link href={profile.linkedin} target="_blank" rel="noopener noreferrer">
-                            <Linkedin className="h-4 w-4 mr-2" />
-                            LinkedIn
-                          </Link>
-                        </Button>
-                      )}
+                    <Button variant="outline" asChild>
+                      <Link href={`mailto:${user.email}`}>
+                        <Mail className="h-4 w-4 mr-2" />
+                        Contact
+                      </Link>
+                    </Button>
+                  </div>
+
+                  {user.bio && (
+                    <p className="text-muted-foreground mb-4 leading-relaxed">
+                      {user.bio}
+                    </p>
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-4">
+                    {user.location && (
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-4 w-4" />
+                        <span>{user.location}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      <span>Joined {formatDate(user.createdAt).split(',')[1]}</span>
                     </div>
                   </div>
-                  
-                  {profile.isAvailableForWork && (
-                    <div>
-                      <Badge variant="success" className="text-sm">
-                        Available for work
-                      </Badge>
-                    </div>
-                  )}
+
+                  {/* Social Links */}
+                  <div className="flex flex-wrap gap-2">
+                    {user.website && (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={user.website} target="_blank" rel="noopener noreferrer">
+                          <Globe className="h-4 w-4 mr-2" />
+                          Website
+                        </Link>
+                      </Button>
+                    )}
+                    {user.github && (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={user.github} target="_blank" rel="noopener noreferrer">
+                          <Github className="h-4 w-4 mr-2" />
+                          GitHub
+                        </Link>
+                      </Button>
+                    )}
+                    {user.twitter && (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={user.twitter} target="_blank" rel="noopener noreferrer">
+                          <Twitter className="h-4 w-4 mr-2" />
+                          Twitter
+                        </Link>
+                      </Button>
+                    )}
+                    {user.linkedin && (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={user.linkedin} target="_blank" rel="noopener noreferrer">
+                          <Linkedin className="h-4 w-4 mr-2" />
+                          LinkedIn
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+        </FadeIn>
 
-          {/* Skills */}
-          {profile.skills && profile.skills.length > 0 && (
-            <div className="mb-12">
-              <h2 className="text-2xl font-bold mb-4">Skills</h2>
-              <div className="flex flex-wrap gap-2">
-                {profile.skills.map((skill) => (
-                  <Badge key={skill} variant="secondary">
-                    {skill}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="grid gap-12 lg:grid-cols-2">
-            {/* Featured Projects */}
-            <section>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">Projects</h2>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm text-muted-foreground">
-                    {profile._count.projects} total
-                  </span>
-
-                </div>
-              </div>
-              
-              {profile.projects.length === 0 ? (
+        <div className="grid gap-8 lg:grid-cols-3">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Skills */}
+            {user.skills.length > 0 && (
+              <FadeIn delay={200}>
                 <Card>
-                  <CardContent className="text-center py-8">
-                    <p className="text-muted-foreground">No featured projects yet.</p>
+                  <CardHeader>
+                    <CardTitle>Skills & Technologies</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {user.skills.map((skill) => (
+                        <Badge key={skill} variant="secondary">
+                          {skill}
+                        </Badge>
+                      ))}
+                    </div>
                   </CardContent>
                 </Card>
-              ) : (
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {profile.projects.map((project) => (
-                    <Card key={project.id} className="group overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                      <div className="relative">
-                        {project.imageUrl ? (
-                          <div className="aspect-video relative overflow-hidden">
-                            <Image
-                              src={project.imageUrl}
-                              alt={project.title}
-                              fill
-                              className="object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                          </div>
-                        ) : (
-                          <div className="aspect-video relative bg-gradient-to-br from-primary/5 to-primary/10 flex items-center justify-center group-hover:from-primary/10 group-hover:to-primary/20 transition-colors duration-300">
-                            <div className="text-center">
-                              <div className="h-12 w-12 rounded-full bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center mx-auto mb-2 transition-colors duration-300">
-                                <Github className="h-6 w-6 text-primary" />
-                              </div>
-                              <p className="text-sm text-muted-foreground font-medium">{project.title}</p>
-                            </div>
-                          </div>
-                        )}
-                        {project.featured && (
-                          <div className="absolute top-3 left-3">
-                            <Badge className="bg-yellow-500 text-yellow-900 shadow-lg">
-                              <Star className="h-3 w-3 mr-1 fill-current" />
-                              Featured
-                            </Badge>
-                          </div>
-                        )}
-                      </div>
-                      
-                      <CardHeader>
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0 flex-1">
-                            <CardTitle className="flex items-center gap-2 text-lg group-hover:text-primary transition-colors duration-300">
-                              <span className="truncate">{project.title}</span>
-                              {project.featured && (
-                                <Star className="h-4 w-4 text-yellow-500 fill-current flex-shrink-0" />
-                              )}
-                            </CardTitle>
-                            <CardDescription className="line-clamp-3 mt-1">
+              </FadeIn>
+            )}
+
+            {/* Featured Projects */}
+            {user.projects.length > 0 && (
+              <FadeIn delay={300}>
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>Featured Projects</CardTitle>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={`/${user.username}/projects`}>
+                          View All ({user._count.projects})
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-6 md:grid-cols-2">
+                      {user.projects.map((project) => (
+                        <Card key={project.id} className="card-hover">
+                          <CardHeader>
+                            <CardTitle className="text-lg">{project.title}</CardTitle>
+                            <CardDescription className="line-clamp-2">
                               {project.description}
                             </CardDescription>
-                          </div>
-                          <div className="flex gap-1 flex-shrink-0">
-                            {project.liveUrl && (
-                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:bg-primary/10" asChild>
-                                <Link href={project.liveUrl} target="_blank" rel="noopener noreferrer">
-                                  <ExternalLink className="h-4 w-4" />
-                                </Link>
-                              </Button>
-                            )}
-                            {project.githubUrl && (
-                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:bg-primary/10" asChild>
-                                <Link href={project.githubUrl} target="_blank" rel="noopener noreferrer">
-                                  <Github className="h-4 w-4" />
-                                </Link>
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </CardHeader>
-                      
-                      <CardContent>
-                        <div className="flex flex-wrap gap-1">
-                          {project.technologies.map((tech) => (
-                            <Badge key={tech} variant="secondary" className="text-xs hover:bg-primary/10 transition-colors duration-200">
-                              {tech}
-                            </Badge>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {/* Recent Posts */}
-            <section>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">Recent Posts</h2>
-                <span className="text-sm text-muted-foreground">
-                  {profile._count.posts} published
-                </span>
-              </div>
-              
-              {profile.posts.length === 0 ? (
-                <Card>
-                  <CardContent className="text-center py-8">
-                    <p className="text-muted-foreground">No blog posts yet.</p>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex flex-wrap gap-1 mb-4">
+                              {project.technologies.slice(0, 3).map((tech) => (
+                                <Badge key={tech} variant="outline" className="text-xs">
+                                  {tech}
+                                </Badge>
+                              ))}
+                              {project.technologies.length > 3 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{project.technologies.length - 3}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              {project.liveUrl && (
+                                <Button size="sm" variant="outline" asChild>
+                                  <Link href={project.liveUrl} target="_blank" rel="noopener noreferrer">
+                                    <Globe className="h-3 w-3 mr-1" />
+                                    Live Demo
+                                  </Link>
+                                </Button>
+                              )}
+                              {project.githubUrl && (
+                                <Button size="sm" variant="outline" asChild>
+                                  <Link href={project.githubUrl} target="_blank" rel="noopener noreferrer">
+                                    <Github className="h-3 w-3 mr-1" />
+                                    Code
+                                  </Link>
+                                </Button>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
                   </CardContent>
                 </Card>
-              ) : (
-                <div className="space-y-4">
-                  {profile.posts.map((post) => (
-                    <Card key={post.id}>
-                      <CardHeader>
-                        <CardTitle className="text-lg">
-                          <Link 
-                            href={`/${profile.username}/blog/${post.slug}`}
-                            className="hover:underline"
-                          >
-                            {post.title}
-                          </Link>
-                        </CardTitle>
-                        <CardDescription>{post.excerpt}</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              </FadeIn>
+            )}
+
+            {/* Recent Blog Posts */}
+            {user.posts.length > 0 && (
+              <FadeIn delay={400}>
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>Recent Articles</CardTitle>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={`/${user.username}/blog`}>
+                          View All ({user._count.posts})
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {user.posts.map((post) => (
+                        <div key={post.id} className="border-b last:border-b-0 pb-4 last:pb-0">
+                          <h3 className="font-medium mb-2">
+                            <Link 
+                              href={`/${user.username}/blog/${post.slug}`}
+                              className="hover:text-blue-600 transition-colors"
+                            >
+                              {post.title}
+                            </Link>
+                          </h3>
+                          <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                            {post.excerpt}
+                          </p>
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
                             <span>{formatDate(post.createdAt)}</span>
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              <span>{post.readingTime} min read</span>
-                            </div>
-                          </div>
-                          <div className="flex gap-1">
-                            {post.tags.slice(0, 2).map((tag) => (
-                              <Badge key={tag} variant="outline" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
+                            <span>{post.readingTime} min read</span>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </section>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </FadeIn>
+            )}
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Stats */}
+            <FadeIn delay={500}>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Profile Stats</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Projects</span>
+                      <span className="font-medium">{user._count.projects}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Articles</span>
+                      <span className="font-medium">{user._count.posts}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Skills</span>
+                      <span className="font-medium">{user.skills.length}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </FadeIn>
+
+            {/* Empty State for New Users */}
+            {user.projects.length === 0 && user.posts.length === 0 && (
+              <FadeIn delay={600}>
+                <Card>
+                  <CardContent className="text-center py-8">
+                    <div className="space-y-4">
+                      <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto">
+                        <Briefcase className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-lg mb-2">Getting Started</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {user.name} is just getting started on DevLink. 
+                          Check back soon for projects and articles!
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </FadeIn>
+            )}
           </div>
         </div>
-      </main>
-      <Footer />
-    </div>
+      </div>
+    </MainLayout>
   )
 }

@@ -55,7 +55,7 @@ export const authOptions: NextAuthOptions = {
             select: { username: true }
           })
           if (dbUser) {
-            session.user.username = dbUser.username
+            session.user.username = dbUser.username || undefined
           }
         } catch (error) {
           console.error('Error fetching user data in session:', error)
