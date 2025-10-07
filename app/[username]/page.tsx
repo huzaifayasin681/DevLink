@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 import Link from "next/link"
-import { MapPin, Globe, Github, Twitter, Linkedin, Calendar, Briefcase, Mail, Zap, Code2, TrendingUp } from "lucide-react"
+import { MapPin, Globe, Github, Twitter, Linkedin, Calendar, Briefcase, Mail, Zap, Code2, TrendingUp, Star, Eye, Users, FileText, Award, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -33,6 +33,22 @@ async function getUserProfile(username: string, currentUserId?: string) {
         projects: {
           where: { featured: true },
           orderBy: { createdAt: 'desc' },
+          take: 6
+        },
+        assignedRequests: {
+          where: { status: 'completed' },
+          include: {
+            client: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                image: true
+              }
+            },
+            project: true
+          },
+          orderBy: { updatedAt: 'desc' },
           take: 6
         },
         posts: {
@@ -84,7 +100,8 @@ async function getUserProfile(username: string, currentUserId?: string) {
             posts: { where: { published: true } },
             followers: true,
             following: true,
-            reviews: true
+            reviews: true,
+            assignedRequests: { where: { status: 'completed' } }
           }
         }
       }
@@ -92,7 +109,6 @@ async function getUserProfile(username: string, currentUserId?: string) {
 
     if (!user) return null
 
-    // Check if current user is following this profile
     let isFollowing = false
     if (currentUserId && currentUserId !== user.id) {
       const follow = await db.follow.findFirst({
@@ -141,425 +157,430 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
 
   return (
     <MainLayout>
-      <div className="container py-8">
-        {/* Profile Header */}
-        <FadeIn>
-          <Card className="mb-8 shadow-xl border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800">
-            <CardContent className="pt-8 pb-8">
-              <div className="flex flex-col md:flex-row gap-8">
-                <div className="relative mx-auto md:mx-0">
-                  <Avatar className="h-40 w-40 ring-4 ring-slate-200 dark:ring-slate-600 shadow-2xl">
-                    <AvatarImage src={user.image || ""} alt={user.name || ""} className="object-cover" />
-                    <AvatarFallback className="text-3xl font-bold bg-gradient-to-br from-blue-600 to-purple-600 text-white">
-                      {getInitials(user.name || "")}
-                    </AvatarFallback>
-                  </Avatar>
-                  {user.isAvailableForWork && (
-                    <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full border-4 border-white dark:border-slate-800 shadow-lg">
-                      <div className="w-full h-full bg-green-400 rounded-full animate-pulse" />
-                    </div>
-                  )}
-                </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+        {/* Hero Section */}
+        <div className="relative bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 h-64 overflow-hidden">
+          <div className="absolute inset-0 bg-black/20" />
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yLjIxLTEuNzktNC00LTRzLTQgMS43OS00IDQgMS43OSA0IDQgNCA0LTEuNzkgNC00em0wLTEwYzAtMi4yMS0xLjc5LTQtNC00cy00IDEuNzktNCA0IDEuNzkgNCA0IDQgNC0xLjc5IDQtNHptMC0xMGMwLTIuMjEtMS43OS00LTQtNHMtNCAxLjc5LTQgNCAxLjc5IDQgNCA0IDQtMS43OSA0LTR6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30" />
+        </div>
 
-                <div className="flex-1 text-center md:text-left space-y-6">
-                  <div className="flex flex-col md:flex-row md:items-start md:justify-between">
-                    <div className="space-y-4">
+        <div className="container relative -mt-32 pb-16">
+          <FadeIn>
+            {/* Profile Card */}
+            <Card className="mb-8 border-0 shadow-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm">
+              <CardContent className="p-8">
+                <div className="flex flex-col lg:flex-row gap-8">
+                  {/* Avatar Section */}
+                  <div className="flex flex-col items-center lg:items-start">
+                    <div className="relative">
+                      <Avatar className="h-32 w-32 ring-4 ring-white dark:ring-slate-800 shadow-xl">
+                        <AvatarImage src={user.image || ""} alt={user.name || ""} className="object-cover" />
+                        <AvatarFallback className="text-4xl font-bold bg-gradient-to-br from-blue-600 to-purple-600 text-white">
+                          {getInitials(user.name || "")}
+                        </AvatarFallback>
+                      </Avatar>
+                      {user.isAvailableForWork && (
+                        <div className="absolute -bottom-2 -right-2 flex items-center gap-2 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg">
+                          <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                          Available
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Info Section */}
+                  <div className="flex-1 space-y-6">
+                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                       <div>
-                        <h1 className="text-4xl font-bold mb-3 text-slate-900 dark:text-slate-100 tracking-tight">
+                        <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
                           {user.name}
                         </h1>
-                        <p className="text-slate-600 dark:text-slate-400 text-xl mb-4 font-medium">
+                        <p className="text-lg text-slate-600 dark:text-slate-400 mb-4">
                           @{user.username}
                         </p>
-                        {user.isAvailableForWork && (
-                          <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 shadow-lg px-4 py-2">
-                            <Briefcase className="h-4 w-4 mr-2" />
-                            Available for work
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-4 flex-wrap justify-center md:justify-end">
-                      <FollowButton
-                        userId={user.id}
-                        initialFollowing={user.isFollowing}
-                      />
-                      {session?.user?.id && session.user.id !== user.id && (
-                        <CollaborationRequests
-                          requests={[]}
-                          currentUserId={session.user.id}
-                          profileUserId={user.id}
-                        />
-                      )}
-                      <Button
-                        variant="outline"
-                        asChild
-                        className="rounded-lg border-2 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-md transition-all"
-                      >
-                        <Link href={`mailto:${user.email}`}>
-                          <Mail className="h-4 w-4 mr-2" />
-                          Contact
-                        </Link>
-                      </Button>
-                    </div>
-                  </div>
-
-                  {user.bio && (
-                    <div className="rounded-xl bg-slate-100 dark:bg-slate-800 p-6 border-l-4 border-l-blue-500 shadow-sm">
-                      <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-lg">
-                        {user.bio}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="flex flex-wrap items-center gap-4 text-sm">
-                    {user.location && (
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">{user.location}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">Joined {formatDate(user.createdAt).split(',')[1]}</span>
-                    </div>
-                  </div>
-
-                  {/* Social Links */}
-                  <div className="flex flex-wrap gap-3">
-                    {user.website && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        asChild
-                        className="rounded-lg"
-                      >
-                        <Link href={user.website} target="_blank" rel="noopener noreferrer">
-                          <Globe className="h-4 w-4 mr-2" />
-                          Website
-                        </Link>
-                      </Button>
-                    )}
-                    {user.github && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        asChild
-                        className="rounded-lg"
-                      >
-                        <Link href={user.github} target="_blank" rel="noopener noreferrer">
-                          <Github className="h-4 w-4 mr-2" />
-                          GitHub
-                        </Link>
-                      </Button>
-                    )}
-                    {user.twitter && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        asChild
-                        className="rounded-lg"
-                      >
-                        <Link href={user.twitter} target="_blank" rel="noopener noreferrer">
-                          <Twitter className="h-4 w-4 mr-2" />
-                          Twitter
-                        </Link>
-                      </Button>
-                    )}
-                    {user.linkedin && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        asChild
-                        className="rounded-lg"
-                      >
-                        <Link href={user.linkedin} target="_blank" rel="noopener noreferrer">
-                          <Linkedin className="h-4 w-4 mr-2" />
-                          LinkedIn
-                        </Link>
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </FadeIn>
-
-        <div className="grid gap-8 lg:grid-cols-3">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Skills */}
-            {user.skills.length > 0 && (
-              <FadeIn delay={200}>
-                <Card className="shadow-lg border-0 bg-white dark:bg-slate-900">
-                  <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-b">
-                    <div className="flex items-center gap-4">
-                      <div className="rounded-full bg-purple-600 p-3 shadow-md">
-                        <Zap className="h-6 w-6 text-white" />
-                      </div>
-                      <CardTitle className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-                        Skills & Technologies
-                      </CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="flex flex-wrap gap-3">
-                      {user.skills.map((skill, index) => (
-                        <Badge
-                          key={skill}
-                          className="bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 text-purple-800 dark:text-purple-200 border-purple-200 dark:border-purple-700 px-4 py-2 text-sm font-medium shadow-sm hover:shadow-md transition-shadow"
-                        >
-                          {skill}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </FadeIn>
-            )}
-
-            {/* Featured Projects */}
-            {user.projects.length > 0 && (
-              <FadeIn delay={300}>
-                <Card className="shadow-lg border-0 bg-white dark:bg-slate-900">
-                  <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-b">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="rounded-full bg-blue-600 p-3 shadow-md">
-                          <Code2 className="h-6 w-6 text-white" />
-                        </div>
-                        <CardTitle className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-                          Featured Projects
-                        </CardTitle>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        asChild
-                        className="rounded-lg border-2 hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-colors"
-                      >
-                        <Link href={`/${user.username}/projects`}>
-                          View All ({user._count.projects})
-                        </Link>
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="grid gap-6 md:grid-cols-2">
-                      {user.projects.map((project) => (
-                        <Card
-                          key={project.id}
-                          className="border-l-4 border-l-blue-500 shadow-md hover:shadow-lg transition-all hover:-translate-y-1 bg-slate-50 dark:bg-slate-800/50"
-                        >
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-lg font-bold text-slate-800 dark:text-slate-100">
-                              {project.title}
-                            </CardTitle>
-                            <CardDescription className="line-clamp-2 text-slate-600 dark:text-slate-400">
-                              {project.description}
-                            </CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="flex flex-wrap gap-2 mb-4">
-                              {project.technologies.slice(0, 3).map((tech) => (
-                                <Badge
-                                  key={tech}
-                                  variant="outline"
-                                  className="text-xs bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600"
-                                >
-                                  {tech}
-                                </Badge>
-                              ))}
-                              {project.technologies.length > 3 && (
-                                <Badge variant="outline" className="text-xs bg-slate-100 dark:bg-slate-800">
-                                  +{project.technologies.length - 3}
-                                </Badge>
-                              )}
+                        <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
+                          {user.location && (
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4" />
+                              <span>{user.location}</span>
                             </div>
-                            <div className="flex gap-3">
-                              {project.liveUrl && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  asChild
-                                  className="rounded-lg border-2 hover:bg-green-50 dark:hover:bg-green-950/20 transition-colors"
-                                >
-                                  <Link href={project.liveUrl} target="_blank" rel="noopener noreferrer">
-                                    <Globe className="h-3 w-3 mr-2" />
-                                    Live Demo
-                                  </Link>
-                                </Button>
-                              )}
-                              {project.githubUrl && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  asChild
-                                  className="rounded-lg border-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                                >
-                                  <Link href={project.githubUrl} target="_blank" rel="noopener noreferrer">
-                                    <Github className="h-3 w-3 mr-2" />
-                                    Code
-                                  </Link>
-                                </Button>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </FadeIn>
-            )}
-
-            {/* Recent Blog Posts */}
-            {user.posts.length > 0 && (
-              <FadeIn delay={400}>
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle>Recent Articles</CardTitle>
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={`/${user.username}/blog`}>
-                          View All ({user._count.posts})
-                        </Link>
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {user.posts.map((post) => (
-                        <div key={post.id} className="border-b last:border-b-0 pb-4 last:pb-0">
-                          <h3 className="font-medium mb-2">
-                            <Link 
-                              href={`/${user.username}/blog/${post.slug}`}
-                              className="hover:text-blue-600 transition-colors"
-                            >
-                              {post.title}
-                            </Link>
-                          </h3>
-                          <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                            {post.excerpt}
-                          </p>
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            <span>{formatDate(post.createdAt)}</span>
-                            <span>{post.readingTime} min read</span>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4" />
+                            <span>Joined {formatDate(user.createdAt).split(',')[1]}</span>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </FadeIn>
-            )}
-
-            {/* Reviews Section */}
-            <FadeIn delay={500}>
-              <ReviewsSection userId={user.id} username={user.username || ""} />
-            </FadeIn>
-
-            {/* Endorsements Section */}
-            <FadeIn delay={600}>
-              <EndorsementsSection
-                userId={user.id}
-                skills={user.skills}
-                endorsements={user.endorsementsReceived}
-                currentUserId={session?.user?.id}
-                isOwnProfile={session?.user?.id === user.id}
-              />
-            </FadeIn>
-
-            {/* Services Section */}
-            {user.services.length > 0 && (
-              <FadeIn delay={700}>
-                <ServicesSection
-                  services={user.services}
-                  hourlyRate={user.hourlyRate}
-                  availableHours={user.availableHours}
-                />
-              </FadeIn>
-            )}
-
-            {/* Testimonials Section */}
-            <FadeIn delay={800}>
-              <TestimonialsSection
-                userId={user.id}
-                testimonials={user.testimonialsReceived}
-                currentUserId={session?.user?.id}
-                isOwnProfile={session?.user?.id === user.id}
-              />
-            </FadeIn>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Stats */}
-            <FadeIn delay={500}>
-              <Card className="shadow-lg border-0 bg-white dark:bg-slate-900">
-                <CardHeader className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20 border-b">
-                  <div className="flex items-center gap-4">
-                    <div className="rounded-full bg-orange-600 p-3 shadow-md">
-                      <TrendingUp className="h-6 w-6 text-white" />
-                    </div>
-                    <CardTitle className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-                      Profile Stats
-                    </CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="flex items-center justify-between p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border-l-4 border-l-blue-500">
-                      <span className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Projects</span>
-                      <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{user._count.projects}</span>
-                    </div>
-                    <div className="flex items-center justify-between p-4 rounded-lg bg-green-50 dark:bg-green-950/20 border-l-4 border-l-green-500">
-                      <span className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Articles</span>
-                      <span className="text-2xl font-bold text-green-600 dark:text-green-400">{user._count.posts}</span>
-                    </div>
-                    <div className="flex items-center justify-between p-4 rounded-lg bg-purple-50 dark:bg-purple-950/20 border-l-4 border-l-purple-500">
-                      <span className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Skills</span>
-                      <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">{user.skills.length}</span>
-                    </div>
-                    <div className="flex items-center justify-between p-4 rounded-lg bg-orange-50 dark:bg-orange-950/20 border-l-4 border-l-orange-500">
-                      <span className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Followers</span>
-                      <span className="text-2xl font-bold text-orange-600 dark:text-orange-400">{user._count.followers}</span>
-                    </div>
-                    <div className="flex items-center justify-between p-4 rounded-lg bg-cyan-50 dark:bg-cyan-950/20 border-l-4 border-l-cyan-500">
-                      <span className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Following</span>
-                      <span className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">{user._count.following}</span>
-                    </div>
-                    <div className="flex items-center justify-between p-4 rounded-lg bg-yellow-50 dark:bg-yellow-950/20 border-l-4 border-l-yellow-500">
-                      <span className="text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide">Profile Views</span>
-                      <span className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{user.profileViews || 0}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </FadeIn>
-
-            {/* Empty State for New Users */}
-            {user.projects.length === 0 && user.posts.length === 0 && (
-              <FadeIn delay={600}>
-                <Card>
-                  <CardContent className="text-center py-8">
-                    <div className="space-y-4">
-                      <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto">
-                        <Briefcase className="h-8 w-8 text-muted-foreground" />
                       </div>
-                      <div>
-                        <h3 className="font-medium text-lg mb-2">Getting Started</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {user.name} is just getting started on DevLink. 
-                          Check back soon for projects and articles!
+
+                      {/* Action Buttons */}
+                      <div className="flex flex-wrap gap-3">
+                        <FollowButton userId={user.id} initialFollowing={user.isFollowing} />
+                        {session?.user?.id && session.user.id !== user.id && (
+                          <CollaborationRequests
+                            requests={[]}
+                            currentUserId={session.user.id}
+                            profileUserId={user.id}
+                          />
+                        )}
+                        <Button variant="outline" asChild className="shadow-sm">
+                          <Link href={`mailto:${user.email}`}>
+                            <Mail className="h-4 w-4 mr-2" />
+                            Contact
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Bio */}
+                    {user.bio && (
+                      <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-800/50 p-6 rounded-xl border border-slate-200 dark:border-slate-700">
+                        <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
+                          {user.bio}
                         </p>
                       </div>
+                    )}
+
+                    {/* Social Links */}
+                    <div className="flex flex-wrap gap-2">
+                      {user.website && (
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={user.website} target="_blank" rel="noopener noreferrer">
+                            <Globe className="h-4 w-4 mr-2" />
+                            Website
+                          </Link>
+                        </Button>
+                      )}
+                      {user.github && (
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={user.github} target="_blank" rel="noopener noreferrer">
+                            <Github className="h-4 w-4 mr-2" />
+                            GitHub
+                          </Link>
+                        </Button>
+                      )}
+                      {user.twitter && (
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={user.twitter} target="_blank" rel="noopener noreferrer">
+                            <Twitter className="h-4 w-4 mr-2" />
+                            Twitter
+                          </Link>
+                        </Button>
+                      )}
+                      {user.linkedin && (
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={user.linkedin} target="_blank" rel="noopener noreferrer">
+                            <Linkedin className="h-4 w-4 mr-2" />
+                            LinkedIn
+                          </Link>
+                        </Button>
+                      )}
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </FadeIn>
+
+          {/* Stats Grid */}
+          <FadeIn delay={100}>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50">
+                <CardContent className="p-6 text-center">
+                  <Code2 className="h-8 w-8 mx-auto mb-2 text-blue-600 dark:text-blue-400" />
+                  <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{user._count.projects + user._count.assignedRequests}</div>
+                  <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">Projects</div>
+                </CardContent>
+              </Card>
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50">
+                <CardContent className="p-6 text-center">
+                  <FileText className="h-8 w-8 mx-auto mb-2 text-purple-600 dark:text-purple-400" />
+                  <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">{user._count.posts}</div>
+                  <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">Articles</div>
+                </CardContent>
+              </Card>
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/50">
+                <CardContent className="p-6 text-center">
+                  <Users className="h-8 w-8 mx-auto mb-2 text-green-600 dark:text-green-400" />
+                  <div className="text-3xl font-bold text-green-600 dark:text-green-400">{user._count.followers}</div>
+                  <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">Followers</div>
+                </CardContent>
+              </Card>
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/50 dark:to-orange-900/50">
+                <CardContent className="p-6 text-center">
+                  <Eye className="h-8 w-8 mx-auto mb-2 text-orange-600 dark:text-orange-400" />
+                  <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">{user.profileViews || 0}</div>
+                  <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">Views</div>
+                </CardContent>
+              </Card>
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-950/50 dark:to-pink-900/50">
+                <CardContent className="p-6 text-center">
+                  <Zap className="h-8 w-8 mx-auto mb-2 text-pink-600 dark:text-pink-400" />
+                  <div className="text-3xl font-bold text-pink-600 dark:text-pink-400">{user.skills.length}</div>
+                  <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">Skills</div>
+                </CardContent>
+              </Card>
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950/50 dark:to-yellow-900/50">
+                <CardContent className="p-6 text-center">
+                  <Star className="h-8 w-8 mx-auto mb-2 text-yellow-600 dark:text-yellow-400" />
+                  <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{user._count.reviews}</div>
+                  <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">Reviews</div>
+                </CardContent>
+              </Card>
+            </div>
+          </FadeIn>
+
+          <div className="grid gap-8 lg:grid-cols-3">
+            {/* Main Content */}
+            <div className="lg:col-span-2 space-y-8">
+              {/* Skills */}
+              {user.skills.length > 0 && (
+                <FadeIn delay={200}>
+                  <Card className="border-0 shadow-lg">
+                    <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-800/50">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-600 rounded-lg">
+                          <Zap className="h-5 w-5 text-white" />
+                        </div>
+                        <CardTitle className="text-xl">Skills & Expertise</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      <div className="flex flex-wrap gap-2">
+                        {user.skills.map((skill) => (
+                          <Badge
+                            key={skill}
+                            className="px-4 py-2 text-sm bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0 shadow-md hover:shadow-lg transition-shadow"
+                          >
+                            {skill}
+                          </Badge>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </FadeIn>
+              )}
+
+              {/* Projects */}
+              {(user.projects.length > 0 || user.assignedRequests.length > 0) && (
+                <FadeIn delay={300}>
+                  <Card className="border-0 shadow-lg">
+                    <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-800/50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-blue-600 rounded-lg">
+                            <Code2 className="h-5 w-5 text-white" />
+                          </div>
+                          <CardTitle className="text-xl">Featured Work</CardTitle>
+                        </div>
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link href={`/${user.username}/projects`}>
+                            View All →
+                          </Link>
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      <div className="grid gap-6 md:grid-cols-2">
+                        {user.projects.map((project) => (
+                          <Card key={project.id} className="group hover:shadow-xl transition-all duration-300 border-2 hover:border-blue-500">
+                            <CardHeader>
+                              <CardTitle className="text-lg group-hover:text-blue-600 transition-colors">
+                                {project.title}
+                              </CardTitle>
+                              <CardDescription className="line-clamp-2">
+                                {project.description}
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="flex flex-wrap gap-2 mb-4">
+                                {project.technologies.slice(0, 3).map((tech) => (
+                                  <Badge key={tech} variant="outline" className="text-xs">
+                                    {tech}
+                                  </Badge>
+                                ))}
+                                {project.technologies.length > 3 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{project.technologies.length - 3}
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex gap-2">
+                                {project.liveUrl && (
+                                  <Button size="sm" variant="outline" asChild>
+                                    <Link href={project.liveUrl} target="_blank">
+                                      <Globe className="h-3 w-3 mr-2" />
+                                      Demo
+                                    </Link>
+                                  </Button>
+                                )}
+                                {project.githubUrl && (
+                                  <Button size="sm" variant="outline" asChild>
+                                    <Link href={project.githubUrl} target="_blank">
+                                      <Github className="h-3 w-3 mr-2" />
+                                      Code
+                                    </Link>
+                                  </Button>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                        {user.assignedRequests.map((request) => (
+                          <Card key={request.id} className="group hover:shadow-xl transition-all duration-300 border-2 border-green-200 hover:border-green-500">
+                            <CardHeader>
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge className="bg-green-500 text-white">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  Completed
+                                </Badge>
+                              </div>
+                              <CardTitle className="text-lg group-hover:text-green-600 transition-colors">
+                                {request.title}
+                              </CardTitle>
+                              <CardDescription className="line-clamp-2">
+                                {request.description}
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="flex flex-wrap gap-2 mb-4">
+                                <Badge variant="outline" className="text-xs">
+                                  {request.category}
+                                </Badge>
+                                {request.client && (
+                                  <Badge variant="outline" className="text-xs">
+                                    Client: {request.client.name}
+                                  </Badge>
+                                )}
+                              </div>
+                              {request.project && (
+                                <div className="flex gap-2">
+                                  {request.project.liveUrl && (
+                                    <Button size="sm" variant="outline" asChild>
+                                      <Link href={request.project.liveUrl} target="_blank">
+                                        <Globe className="h-3 w-3 mr-2" />
+                                        Demo
+                                      </Link>
+                                    </Button>
+                                  )}
+                                  {request.project.githubUrl && (
+                                    <Button size="sm" variant="outline" asChild>
+                                      <Link href={request.project.githubUrl} target="_blank">
+                                        <Github className="h-3 w-3 mr-2" />
+                                        Code
+                                      </Link>
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </FadeIn>
+              )}
+
+              {/* Blog Posts */}
+              {user.posts.length > 0 && (
+                <FadeIn delay={400}>
+                  <Card className="border-0 shadow-lg">
+                    <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-800/50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-indigo-600 rounded-lg">
+                            <FileText className="h-5 w-5 text-white" />
+                          </div>
+                          <CardTitle className="text-xl">Recent Articles</CardTitle>
+                        </div>
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link href={`/${user.username}/blog`}>
+                            View All →
+                          </Link>
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      <div className="space-y-4">
+                        {user.posts.map((post) => (
+                          <div key={post.id} className="group p-4 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700">
+                            <h3 className="font-semibold mb-2 group-hover:text-blue-600 transition-colors">
+                              <Link href={`/${user.username}/blog/${post.slug}`}>
+                                {post.title}
+                              </Link>
+                            </h3>
+                            <p className="text-sm text-slate-600 dark:text-slate-400 mb-3 line-clamp-2">
+                              {post.excerpt}
+                            </p>
+                            <div className="flex items-center gap-4 text-xs text-slate-500">
+                              <span>{formatDate(post.createdAt)}</span>
+                              <span>•</span>
+                              <span>{post.readingTime} min read</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </FadeIn>
+              )}
+
+              <FadeIn delay={500}>
+                <ReviewsSection userId={user.id} username={user.username || ""} />
               </FadeIn>
-            )}
+
+              <FadeIn delay={600}>
+                <EndorsementsSection
+                  userId={user.id}
+                  skills={user.skills}
+                  endorsements={user.endorsementsReceived}
+                  currentUserId={session?.user?.id}
+                  isOwnProfile={session?.user?.id === user.id}
+                />
+              </FadeIn>
+
+              {user.services.length > 0 && (
+                <FadeIn delay={700}>
+                  <ServicesSection
+                    services={user.services}
+                    hourlyRate={user.hourlyRate}
+                    availableHours={user.availableHours}
+                  />
+                </FadeIn>
+              )}
+
+              <FadeIn delay={800}>
+                <TestimonialsSection
+                  userId={user.id}
+                  testimonials={user.testimonialsReceived}
+                  currentUserId={session?.user?.id}
+                  isOwnProfile={session?.user?.id === user.id}
+                />
+              </FadeIn>
+            </div>
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              {user.projects.length === 0 && user.posts.length === 0 && (
+                <FadeIn delay={600}>
+                  <Card className="border-0 shadow-lg">
+                    <CardContent className="text-center py-12">
+                      <div className="space-y-4">
+                        <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 flex items-center justify-center mx-auto">
+                          <Briefcase className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-lg mb-2">Getting Started</h3>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">
+                            {user.name} is just getting started on DevLink. Check back soon!
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </FadeIn>
+              )}
+            </div>
           </div>
         </div>
       </div>

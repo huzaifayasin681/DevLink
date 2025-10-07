@@ -98,6 +98,32 @@ export const authOptions: NextAuthOptions = {
       return token
     },
     async signIn({ user, account, profile }) {
+      if (account?.provider === "google") {
+        try {
+          const existingUser = await db.user.findUnique({
+            where: { email: user.email! }
+          })
+          
+          if (existingUser && !existingUser.username) {
+            const baseUsername = user.email!.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '')
+            let username = baseUsername
+            let counter = 1
+            
+            while (await db.user.findUnique({ where: { username } })) {
+              username = `${baseUsername}${counter}`
+              counter++
+            }
+            
+            await db.user.update({
+              where: { id: existingUser.id },
+              data: { username }
+            })
+          }
+        } catch (error) {
+          console.error('Error in Google sign in:', error)
+        }
+      }
+      
       if (account?.provider === "github") {
         try {
           const githubUsername = (profile as any).login

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { ArrowLeft, ExternalLink, Github, Calendar } from "lucide-react"
+import { ArrowLeft, ExternalLink, Github, Calendar, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -30,6 +30,20 @@ async function getUserProjects(username: string, currentUserId?: string) {
             { featured: 'desc' },
             { createdAt: 'desc' }
           ]
+        },
+        assignedRequests: {
+          where: { status: 'completed' },
+          include: {
+            client: {
+              select: {
+                name: true,
+                username: true,
+                image: true
+              }
+            },
+            project: true
+          },
+          orderBy: { updatedAt: 'desc' }
         }
       }
     })
@@ -97,12 +111,12 @@ export default async function UserProjectsPage({ params }: UserProjectsPageProps
           <div>
             <h1 className="text-3xl font-bold">{user.name}'s Projects</h1>
             <p className="text-muted-foreground">
-              {user.projects.length} projects by @{user.username}
+              {user.projects.length + user.assignedRequests.length} projects by @{user.username}
             </p>
           </div>
         </div>
 
-        {user.projects.length === 0 ? (
+        {user.projects.length === 0 && user.assignedRequests.length === 0 ? (
           <Card className="text-center py-16">
             <CardContent>
               <div className="space-y-4">
@@ -120,8 +134,21 @@ export default async function UserProjectsPage({ params }: UserProjectsPageProps
           </Card>
         ) : (
           <div className="space-y-8">
-            {featuredProjects.length > 0 && (
+            {user.assignedRequests.length > 0 && (
               <FadeIn>
+                <section>
+                  <h2 className="text-xl font-semibold mb-4">Completed Client Projects</h2>
+                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {user.assignedRequests.map((request) => (
+                      <CompletedRequestCard key={request.id} request={request} />
+                    ))}
+                  </div>
+                </section>
+              </FadeIn>
+            )}
+
+            {featuredProjects.length > 0 && (
+              <FadeIn delay={100}>
                 <section>
                   <h2 className="text-xl font-semibold mb-4">Featured Projects</h2>
                   <div className="grid gap-6 md:grid-cols-2">
@@ -229,6 +256,76 @@ function ProjectCard({ project }: { project: any }) {
               </Button>
             )}
           </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function CompletedRequestCard({ request }: { request: any }) {
+  return (
+    <Card className="card-hover overflow-hidden group border-l-4 border-l-green-500">
+      {request.project?.imageUrl ? (
+        <div className="aspect-video relative">
+          <Image
+            src={request.project.imageUrl}
+            alt={request.title}
+            fill
+            className="object-cover"
+          />
+        </div>
+      ) : (
+        <div className="aspect-video relative bg-green-50 dark:bg-green-950/20 flex items-center justify-center">
+          <Github className="h-12 w-12 text-green-600" />
+        </div>
+      )}
+      
+      <CardHeader>
+        <div className="flex items-center justify-between mb-2">
+          <Badge className="bg-green-500 text-white">Completed</Badge>
+        </div>
+        <CardTitle className="line-clamp-1">{request.title}</CardTitle>
+        <CardDescription className="line-clamp-2">
+          {request.description}
+        </CardDescription>
+      </CardHeader>
+      
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="outline" className="text-xs">
+            {request.category}
+          </Badge>
+          {request.client && (
+            <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-950/20">
+              Client: {request.client.name}
+            </Badge>
+          )}
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Calendar className="h-3 w-3" />
+            <span>{formatDate(request.updatedAt)}</span>
+          </div>
+          
+          {request.project && (
+            <div className="flex gap-2">
+              {request.project.liveUrl && (
+                <Button size="sm" variant="outline" asChild>
+                  <Link href={request.project.liveUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-3 w-3" />
+                  </Link>
+                </Button>
+              )}
+              {request.project.githubUrl && (
+                <Button size="sm" variant="outline" asChild>
+                  <Link href={request.project.githubUrl} target="_blank" rel="noopener noreferrer">
+                    <Github className="h-3 w-3" />
+                  </Link>
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
