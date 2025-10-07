@@ -12,11 +12,15 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       profile(profile) {
+        const baseUsername = profile.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '')
+        const username = `${baseUsername}${Date.now().toString().slice(-4)}`
+        
         return {
           id: profile.sub,
           name: profile.name,
           email: profile.email,
           image: profile.picture,
+          username,
           role: "client",
           approved: true,
         }
@@ -98,32 +102,6 @@ export const authOptions: NextAuthOptions = {
       return token
     },
     async signIn({ user, account, profile }) {
-      if (account?.provider === "google") {
-        try {
-          const existingUser = await db.user.findUnique({
-            where: { email: user.email! }
-          })
-          
-          if (existingUser && !existingUser.username) {
-            const baseUsername = user.email!.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '')
-            let username = baseUsername
-            let counter = 1
-            
-            while (await db.user.findUnique({ where: { username } })) {
-              username = `${baseUsername}${counter}`
-              counter++
-            }
-            
-            await db.user.update({
-              where: { id: existingUser.id },
-              data: { username }
-            })
-          }
-        } catch (error) {
-          console.error('Error in Google sign in:', error)
-        }
-      }
-      
       if (account?.provider === "github") {
         try {
           const githubUsername = (profile as any).login
@@ -179,6 +157,25 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   events: {
+    async createUser({ user }) {
+      // Generate username if not set
+      if (!user.username) {
+        const baseUsername = user.email?.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '') || 'user'
+        let username = `${baseUsername}${Date.now().toString().slice(-4)}`
+        
+        // Ensure uniqueness
+        let counter = 1
+        while (await db.user.findUnique({ where: { username } })) {
+          username = `${baseUsername}${Date.now().toString().slice(-4)}${counter}`
+          counter++
+        }
+        
+        await db.user.update({
+          where: { id: user.id },
+          data: { username },
+        })
+      }
+    },
     async linkAccount({ user, account, profile }) {
       // Update user profile with additional data from the linked account
       if (account.provider === "github" && profile) {
