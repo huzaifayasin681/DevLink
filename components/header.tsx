@@ -31,29 +31,65 @@ export function Header() {
         <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
           <div className="w-full flex-1 md:w-auto md:flex-none">
             <nav className="flex items-center space-x-8 text-sm font-medium">
-              <Link
-                href="/explore"
-                className="relative px-3 py-2 rounded-lg transition-all duration-300 hover:bg-white/10 hover:scale-105 hover:shadow-lg text-foreground/70 hover:text-foreground group overflow-hidden"
-              >
-                <span className="relative z-10">Explore</span>
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              </Link>
-              {session && (
+              {!session && (
+                <Link
+                  href="/explore"
+                  className="relative px-3 py-2 rounded-lg transition-all duration-300 hover:bg-white/10 hover:scale-105 hover:shadow-lg text-foreground/70 hover:text-foreground group overflow-hidden"
+                >
+                  <span className="relative z-10">Explore</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                </Link>
+              )}
+              {session && session.user.role === "client" && (
                 <>
                   <Link
-                    href="/dashboard"
+                    href="/client/dashboard"
                     className="relative px-3 py-2 rounded-lg transition-all duration-300 hover:bg-white/10 hover:scale-105 hover:shadow-lg text-foreground/70 hover:text-foreground group overflow-hidden"
                   >
                     <span className="relative z-10">Dashboard</span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  </Link>
+                  <Link
+                    href="/client/requests"
+                    className="relative px-3 py-2 rounded-lg transition-all duration-300 hover:bg-white/10 hover:scale-105 hover:shadow-lg text-foreground/70 hover:text-foreground group overflow-hidden"
+                  >
+                    <span className="relative z-10">My Requests</span>
                     <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  </Link>
+                </>
+              )}
+              {session && session.user.role === "developer" && session.user.approved && (
+                <>
+                  <Link
+                    href="/developer/dashboard"
+                    className="relative px-3 py-2 rounded-lg transition-all duration-300 hover:bg-white/10 hover:scale-105 hover:shadow-lg text-foreground/70 hover:text-foreground group overflow-hidden"
+                  >
+                    <span className="relative z-10">Dashboard</span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-pink-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </Link>
                   <Link
                     href={`/${session.user.username}`}
                     className="relative px-3 py-2 rounded-lg transition-all duration-300 hover:bg-white/10 hover:scale-105 hover:shadow-lg text-foreground/70 hover:text-foreground group overflow-hidden"
                   >
-                    <span className="relative z-10">Profile</span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-pink-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <span className="relative z-10">Portfolio</span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </Link>
+                  <Link
+                    href="/developer/requests"
+                    className="relative px-3 py-2 rounded-lg transition-all duration-300 hover:bg-white/10 hover:scale-105 hover:shadow-lg text-foreground/70 hover:text-foreground group overflow-hidden"
+                  >
+                    <span className="relative z-10">Requests</span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  </Link>
+                  {session.user.isAdmin && (
+                    <Link
+                      href="/admin/dashboard"
+                      className="relative px-3 py-2 rounded-lg transition-all duration-300 hover:bg-white/10 hover:scale-105 hover:shadow-lg text-foreground/70 hover:text-foreground group overflow-hidden"
+                    >
+                      <span className="relative z-10">Admin</span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-pink-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    </Link>
+                  )}
                 </>
               )}
             </nav>
@@ -95,24 +131,56 @@ export function Header() {
                     </div>
                   </div>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href={`/${session.user.username}`}>
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard">
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Dashboard</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard/projects/new">
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      <span>New Project</span>
-                    </Link>
-                  </DropdownMenuItem>
+                  {session.user.role === "client" && (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link href="/client/dashboard">
+                          <Settings className="mr-2 h-4 w-4" />
+                          <span>Dashboard</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/client/profile">
+                          <User className="mr-2 h-4 w-4" />
+                          <span>Profile</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/client/requests/new">
+                          <PlusCircle className="mr-2 h-4 w-4" />
+                          <span>New Request</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {session.user.role === "developer" && session.user.approved && (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link href={`/${session.user.username}`}>
+                          <User className="mr-2 h-4 w-4" />
+                          <span>Portfolio</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/developer/dashboard">
+                          <Settings className="mr-2 h-4 w-4" />
+                          <span>Dashboard</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard/projects/new">
+                          <PlusCircle className="mr-2 h-4 w-4" />
+                          <span>New Project</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard/testimonials">
+                          <User className="mr-2 h-4 w-4" />
+                          <span>Testimonials</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => signOut()}

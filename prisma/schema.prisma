@@ -46,6 +46,13 @@ model User {
   email              String    @unique
   emailVerified      DateTime?
   image              String?
+  
+  // Role-based fields
+  role               String    @default("client")  // "client" or "developer"
+  approved           Boolean   @default(false)     // For GitHub developer approval
+  isAdmin            Boolean   @default(false)     // Admin access
+  
+  // Developer-specific fields
   username           String?   @unique
   bio                String?
   location           String?
@@ -58,6 +65,14 @@ model User {
   hourlyRate         Float?
   availableHours     String[]  @default([]) // Array of available time slots
   profileViews       Int       @default(0)
+  
+  // Client-specific fields
+  companyName        String?
+  phoneNumber        String?
+  address            String?
+  industry           String?
+  
+  // Common fields
   emailNotifications Boolean   @default(true)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
@@ -83,6 +98,10 @@ model User {
   messagesReceived Message[] @relation("MessageReceiver")
   collaborationRequestsSent CollaborationRequest[] @relation("RequestSender")
   collaborationRequestsReceived CollaborationRequest[] @relation("RequestReceiver")
+  
+  // New relations for client-developer workflow
+  serviceRequests ServiceRequest[] @relation("ClientRequests")
+  assignedRequests ServiceRequest[] @relation("DeveloperAssignments")
 
   @@map("users")
 }
@@ -115,6 +134,7 @@ model Project {
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   likes    Like[]
   comments Comment[]
+  serviceRequest ServiceRequest[]
 
   @@map("projects")
 }
@@ -298,4 +318,30 @@ model CollaborationRequest {
   receiver User @relation("RequestReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@map("collaboration_requests")
+}
+
+model ServiceRequest {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String
+  category    String   // "Web Development", "Mobile App", "Design", "Consulting", etc.
+  budget      String?
+  timeline    String?
+  status      String   @default("pending")  // "pending", "in_progress", "completed", "rejected"
+  priority    String   @default("medium")   // "low", "medium", "high"
+  attachments String[] @default([])          // Array of file URLs
+  notes       String?                        // Internal notes from developers
+  
+  clientId    String   @db.ObjectId
+  assignedTo  String?  @db.ObjectId
+  projectId   String?  @db.ObjectId
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  client     User     @relation("ClientRequests", fields: [clientId], references: [id], onDelete: Cascade)
+  developer  User?    @relation("DeveloperAssignments", fields: [assignedTo], references: [id], onDelete: SetNull)
+  project    Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@map("service_requests")
 }

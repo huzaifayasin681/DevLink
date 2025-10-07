@@ -17,6 +17,8 @@ export const authOptions: NextAuthOptions = {
           name: profile.name,
           email: profile.email,
           image: profile.picture,
+          role: "client",
+          approved: true,
         }
       },
     }),
@@ -25,7 +27,7 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
       authorization: {
         params: {
-          scope: "read:user user:email public_repo"
+          scope: "read:user user:email repo"
         }
       },
       profile(profile) {
@@ -39,6 +41,8 @@ export const authOptions: NextAuthOptions = {
           location: profile.location,
           website: profile.blog,
           github: profile.html_url,
+          role: "developer",
+          approved: false,
         }
       },
     }),
@@ -47,15 +51,21 @@ export const authOptions: NextAuthOptions = {
     async session({ token, session }) {
       if (token && session.user) {
         session.user.id = token.id as string
+        session.user.role = token.role as string
+        session.user.approved = token.approved as boolean
+        session.user.isAdmin = token.isAdmin as boolean
         
         // Fetch fresh user data from database
         try {
           const dbUser = await db.user.findUnique({
             where: { id: token.id as string },
-            select: { username: true }
+            select: { username: true, role: true, approved: true, isAdmin: true }
           })
           if (dbUser) {
             session.user.username = dbUser.username || undefined
+            session.user.role = dbUser.role
+            session.user.approved = dbUser.approved
+            session.user.isAdmin = dbUser.isAdmin
           }
         } catch (error) {
           console.error('Error fetching user data in session:', error)
@@ -64,45 +74,73 @@ export const authOptions: NextAuthOptions = {
       return session
     },
 
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id
+        token.role = user.role || "client"
+        token.approved = user.approved || false
+        token.isAdmin = user.isAdmin || false
       }
+      
+      // Refresh token data on update
+      if (trigger === "update") {
+        const dbUser = await db.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true, approved: true, isAdmin: true }
+        })
+        if (dbUser) {
+          token.role = dbUser.role
+          token.approved = dbUser.approved
+          token.isAdmin = dbUser.isAdmin
+        }
+      }
+      
       return token
     },
     async signIn({ user, account, profile }) {
-      // Handle GitHub profile setup after successful sign in
-      if (account?.provider === "github" && profile) {
+      if (account?.provider === "github") {
         try {
+          const githubUsername = (profile as any).login
           const existingUser = await db.user.findUnique({
             where: { email: user.email! }
           })
           
-          if (existingUser && !existingUser.username) {
-            let baseUsername = (profile as any).login || user.name?.toLowerCase().replace(/\s+/g, '_') || user.email?.split('@')[0] || 'user'
-            let username = baseUsername
-            let counter = 1
-            
-            // Check if username exists and append number if needed
-            while (await db.user.findUnique({ where: { username } })) {
-              username = `${baseUsername}${counter}`
-              counter++
+          if (existingUser) {
+            // Block unapproved developers (except first user)
+            if (existingUser.role === "developer" && !existingUser.approved && githubUsername !== "huzaifayasin681") {
+              return "/login?error=pending_approval"
             }
+            
+            // Update user with GitHub data if needed
+            if (!existingUser.username) {
+              let username = githubUsername
+              let counter = 1
+              
+              while (await db.user.findUnique({ where: { username } })) {
+                username = `${githubUsername}${counter}`
+                counter++
+              }
+              
+              // Auto-approve first user (huzaifayasin681), others need approval
+              const isFirstUser = githubUsername === "huzaifayasin681"
 
-            // Update user profile with GitHub data
-            await db.user.update({
-              where: { id: existingUser.id },
-              data: { 
-                username,
-                bio: (profile as any).bio || null,
-                location: (profile as any).location || null,
-                website: (profile as any).blog || null,
-                github: (profile as any).html_url || null,
-              },
-            })
+              await db.user.update({
+                where: { id: existingUser.id },
+                data: { 
+                  username,
+                  bio: (profile as any).bio || null,
+                  location: (profile as any).location || null,
+                  website: (profile as any).blog || null,
+                  github: (profile as any).html_url || null,
+                  role: "developer",
+                  approved: isFirstUser,
+                  isAdmin: isFirstUser,
+                },
+              })
+            }
           }
         } catch (error) {
-          console.error('Error updating user profile:', error)
+          console.error('Error in GitHub sign in:', error)
         }
       }
       return true

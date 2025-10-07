@@ -20,6 +20,8 @@ export default function LoginPage() {
     const error = searchParams.get('error')
     if (error === 'OAuthAccountNotLinked') {
       toast.error('An account with this email already exists. Please sign in with the original provider first.')
+    } else if (error === 'pending_approval') {
+      toast.error('Your developer account is pending approval. Please contact the admin.')
     }
   }, [searchParams])
 
@@ -29,18 +31,19 @@ export default function LoginPage() {
 
     try {
       const result = await signIn(providerId, {
-        callbackUrl: providerId === "github" ? "/setup" : "/dashboard",
+        callbackUrl: providerId === "google" ? "/client/dashboard" : "/developer/dashboard",
         redirect: false,
       })
 
       if (result?.error) {
         if (result.error === 'OAuthAccountNotLinked') {
-          toast.error('An account with this email already exists. Please try in with the original provider first.')
+          toast.error('An account with this email already exists. Please sign in with the original provider first.')
         } else {
           toast.error("Something went wrong. Please try again.")
         }
       } else if (result?.url) {
-        toast.success("Welcome to DevLink!")
+        const message = providerId === "google" ? "Welcome, Client!" : "Welcome, Developer!"
+        toast.success(message)
         router.push(result.url)
       }
     } catch (error) {
@@ -72,75 +75,91 @@ export default function LoginPage() {
             </div>
             <CardTitle className="text-2xl font-bold">Welcome to DevLink</CardTitle>
             <CardDescription>
-              Sign in to create your developer profile and showcase your projects
+              Choose your account type to continue
             </CardDescription>
           </CardHeader>
           
-          <CardContent className="space-y-4">
-            <Button
-              className="w-full h-12"
-              onClick={() => handleSignIn("github")}
-              disabled={isLoading}
-              variant="outline"
-            >
-              {isLoading && provider === "github" ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
-              ) : (
-                <Github className="h-5 w-5 mr-2" />
-              )}
-              Continue with GitHub
-            </Button>
-
-            <Button
-              className="w-full h-12"
-              onClick={() => handleSignIn("google")}
-              disabled={isLoading}
-              variant="outline"
-            >
-              {isLoading && provider === "google" ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
-              ) : (
-                <Chrome className="h-5 w-5 mr-2" />
-              )}
-              Continue with Google
-            </Button>
+          <CardContent className="space-y-6">
+            {/* CLIENT LOGIN */}
+            <div className="space-y-3 p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+              <div>
+                <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">For Clients</p>
+                <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                  Request services and track your projects
+                </p>
+              </div>
+              <Button
+                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => handleSignIn("google")}
+                disabled={isLoading}
+              >
+                {isLoading && provider === "google" ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                ) : (
+                  <Chrome className="h-5 w-5 mr-2" />
+                )}
+                Continue with Google
+              </Button>
+            </div>
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">Trusted by developers</span>
+                <span className="bg-card px-2 text-muted-foreground">or</span>
               </div>
             </div>
 
-            <div className="text-center space-y-2 pt-4">
-              <p className="text-sm text-muted-foreground">
+            {/* DEVELOPER LOGIN */}
+            <div className="space-y-3 p-4 rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
+              <div>
+                <p className="text-sm font-semibold text-purple-900 dark:text-purple-100">For Developers (Staff Only)</p>
+                <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">
+                  Manage client requests and showcase your portfolio
+                </p>
+              </div>
+              <Button
+                className="w-full h-11 bg-purple-600 hover:bg-purple-700 text-white"
+                onClick={() => handleSignIn("github")}
+                disabled={isLoading}
+              >
+                {isLoading && provider === "github" ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                ) : (
+                  <Github className="h-5 w-5 mr-2" />
+                )}
+                Continue with GitHub
+              </Button>
+              <p className="text-xs text-purple-600 dark:text-purple-400 text-center">
+                ⚠️ Requires admin approval
+              </p>
+            </div>
+
+            <div className="text-center space-y-2 pt-2">
+              <p className="text-xs text-muted-foreground">
                 By signing in, you agree to our{" "}
                 <Link href="/terms" className="underline hover:text-foreground">
-                  Terms of Service
+                  Terms
                 </Link>{" "}
                 and{" "}
                 <Link href="/privacy" className="underline hover:text-foreground">
                   Privacy Policy
                 </Link>
               </p>
-              
-              <div className="flex items-center justify-center space-x-4 text-xs text-muted-foreground pt-2">
-                <span>✨ Free forever</span>
-                <span>🔒 Secure & private</span>
-                <span>🚀 Ready in 2 minutes</span>
-              </div>
             </div>
           </CardContent>
         </Card>
 
-        <div className="mt-8 text-center">
+        <div className="mt-6 text-center space-y-2">
           <p className="text-sm text-muted-foreground">
-            New to DevLink?{" "}
-            <Link href="/explore" className="font-medium hover:underline">
-              Explore developer profiles
+            Want to explore?{" "}
+            <Link href="/explore" className="font-medium hover:underline text-blue-600 dark:text-blue-400">
+              View developer portfolios
             </Link>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            🔒 Secure • ⚡ Fast • 🎯 Purpose-built
           </p>
         </div>
       </div>

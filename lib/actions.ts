@@ -726,7 +726,7 @@ export async function addTestimonial(data: {
       }
     })
 
-    revalidatePath(`/${data.userId}`)
+    revalidatePath("/dashboard/testimonials")
     return { success: true, testimonial }
   } catch (error) {
     console.error("Add testimonial error:", error)
@@ -755,7 +755,9 @@ export async function approveTestimonial(testimonialId: string) {
       data: { approved: true }
     })
 
-    revalidatePath("/dashboard")
+    revalidatePath("/dashboard/testimonials")
+    const user = await db.user.findUnique({ where: { id: session.user.id }, select: { username: true } })
+    if (user?.username) revalidatePath(`/${user.username}`)
     return { success: true, testimonial: updatedTestimonial }
   } catch (error) {
     console.error("Approve testimonial error:", error)
@@ -783,7 +785,9 @@ export async function rejectTestimonial(testimonialId: string) {
       where: { id: testimonialId }
     })
 
-    revalidatePath("/dashboard")
+    revalidatePath("/dashboard/testimonials")
+    const user = await db.user.findUnique({ where: { id: session.user.id }, select: { username: true } })
+    if (user?.username) revalidatePath(`/${user.username}`)
     return { success: true }
   } catch (error) {
     console.error("Reject testimonial error:", error)

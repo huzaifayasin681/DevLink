@@ -20,19 +20,24 @@ export async function GET() {
     })
 
     if (!account?.access_token) {
-      return NextResponse.json({ error: "GitHub account not linked" }, { status: 400 })
+      return NextResponse.json({ error: "GitHub account not linked. Please logout and login again with GitHub." }, { status: 400 })
     }
 
     // Fetch repositories from GitHub API
     const response = await fetch("https://api.github.com/user/repos?sort=updated&per_page=50", {
       headers: {
-        'Authorization': `token ${account.access_token}`,
-        'Accept': 'application/vnd.github.v3+json'
+        'Authorization': `Bearer ${account.access_token}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'DevLink-App'
       }
     })
 
     if (!response.ok) {
-      return NextResponse.json({ error: "Failed to fetch repositories" }, { status: 500 })
+      const errorText = await response.text()
+      console.error('GitHub API Error:', response.status, errorText)
+      return NextResponse.json({ 
+        error: `GitHub API error: ${response.status}. Token may be expired. Please logout and login again.` 
+      }, { status: 500 })
     }
 
     const repos = await response.json()
