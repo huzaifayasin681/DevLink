@@ -61,14 +61,6 @@ export default function DeveloperDashboard() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-      </div>
-    )
-  }
-
-  if (status === "loading") {
-    return (
       <MainLayout>
         <div className="container py-8 flex justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
