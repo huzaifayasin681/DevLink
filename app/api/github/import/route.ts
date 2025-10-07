@@ -174,7 +174,7 @@ ${repo.license ? repo.license.name : 'No license specified'}
           // Create project from repository
           const project = await db.project.create({
             data: {
-              title: repo.name.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+              title: repo.name.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
               description: repo.description || `A ${repo.language || 'software'} project with ${repo.stargazers_count} stars on GitHub`,
               content: projectContent,
               imageUrl: imageUrl,
