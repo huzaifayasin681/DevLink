@@ -31,10 +31,15 @@ export function FadeIn({
       ([entry]) => {
         if (entry.isIntersecting) {
           if (!once || !hasAnimated) {
-            setTimeout(() => {
+            if (delay > 0) {
+              setTimeout(() => {
+                setIsVisible(true)
+                if (once) setHasAnimated(true)
+              }, delay)
+            } else {
               setIsVisible(true)
               if (once) setHasAnimated(true)
-            }, delay)
+            }
           }
         } else if (!once) {
           setIsVisible(false)
@@ -46,11 +51,17 @@ export function FadeIn({
       }
     )
 
-    if (elementRef.current) {
-      observer.observe(elementRef.current)
+    const currentElement = elementRef.current
+    if (currentElement) {
+      observer.observe(currentElement)
     }
 
-    return () => observer.disconnect()
+    return () => {
+      if (currentElement) {
+        observer.unobserve(currentElement)
+      }
+      observer.disconnect()
+    }
   }, [delay, once, hasAnimated])
 
   const getTransform = () => {
@@ -77,8 +88,7 @@ export function FadeIn({
       style={{
         opacity: isVisible ? 1 : 0,
         transform: getTransform(),
-        transition: `opacity ${duration}ms ease-out, transform ${duration}ms ease-out`,
-        willChange: "opacity, transform"
+        transition: `opacity ${duration}ms ease-out, transform ${duration}ms ease-out`
       }}
     >
       {children}

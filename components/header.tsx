@@ -20,8 +20,8 @@ export function Header() {
   const { data: session, status } = useSession()
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center">
+    <header className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-6xl glass-nav rounded-2xl animate-slide-up-fade">
+      <div className="container flex h-16 items-center px-6">
         <div className="mr-4 flex">
           <Link href="/" className="mr-6">
             <DevLinkLogo size="sm" />
@@ -30,44 +30,49 @@ export function Header() {
 
         <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
           <div className="w-full flex-1 md:w-auto md:flex-none">
-            <nav className="flex items-center space-x-6 text-sm font-medium">
+            <nav className="flex items-center space-x-8 text-sm font-medium">
               <Link
                 href="/explore"
-                className="transition-colors hover:text-foreground/80 text-foreground/60"
+                className="relative px-3 py-2 rounded-lg transition-all duration-300 hover:bg-white/10 hover:scale-105 hover:shadow-lg text-foreground/70 hover:text-foreground group overflow-hidden"
               >
-                Explore
+                <span className="relative z-10">Explore</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </Link>
               {session && (
                 <>
                   <Link
                     href="/dashboard"
-                    className="transition-colors hover:text-foreground/80 text-foreground/60"
+                    className="relative px-3 py-2 rounded-lg transition-all duration-300 hover:bg-white/10 hover:scale-105 hover:shadow-lg text-foreground/70 hover:text-foreground group overflow-hidden"
                   >
-                    Dashboard
+                    <span className="relative z-10">Dashboard</span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </Link>
                   <Link
                     href={`/${session.user.username}`}
-                    className="transition-colors hover:text-foreground/80 text-foreground/60"
+                    className="relative px-3 py-2 rounded-lg transition-all duration-300 hover:bg-white/10 hover:scale-105 hover:shadow-lg text-foreground/70 hover:text-foreground group overflow-hidden"
                   >
-                    Profile
+                    <span className="relative z-10">Profile</span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-pink-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </Link>
                 </>
               )}
             </nav>
           </div>
 
-          <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="icon" asChild>
+          <div className="flex items-center space-x-3">
+            <Button variant="ghost" size="icon" asChild className="hover:bg-white/10 hover:scale-110 transition-all duration-300 rounded-xl">
               <Link href="/explore">
                 <Search className="h-4 w-4" />
                 <span className="sr-only">Search developers</span>
               </Link>
             </Button>
 
-            <ThemeToggle />
+            <div className="hover:scale-110 transition-all duration-300">
+              <ThemeToggle />
+            </div>
 
             {status === "loading" ? (
-              <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+              <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500/30 to-purple-500/30 animate-pulse backdrop-blur" />
             ) : session ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -119,11 +124,11 @@ export function Header() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <div className="flex items-center space-x-2">
-                <Button variant="ghost" asChild>
+              <div className="flex items-center space-x-3">
+                <Button variant="ghost" asChild className="hover:bg-white/10 hover:scale-105 transition-all duration-300 rounded-xl">
                   <Link href="/login">Sign In</Link>
                 </Button>
-                <Button asChild>
+                <Button asChild className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 hover:scale-105 transition-all duration-300 rounded-xl shadow-lg hover:shadow-xl hover-glow">
                   <Link href="/login">Get Started</Link>
                 </Button>
               </div>

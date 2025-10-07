@@ -20,6 +20,8 @@ export function AnimatedCounter({
   suffix = "",
   separator = ","
 }: AnimatedCounterProps) {
+  // Ensure value is a valid number
+  const safeValue = typeof value === 'number' && !isNaN(value) ? value : 0
   const [count, setCount] = useState(0)
   const [isInView, setIsInView] = useState(false)
   const countRef = useRef<HTMLSpanElement>(null)
@@ -34,11 +36,17 @@ export function AnimatedCounter({
       { threshold: 0.1 }
     )
 
-    if (countRef.current) {
-      observer.observe(countRef.current)
+    const currentElement = countRef.current
+    if (currentElement) {
+      observer.observe(currentElement)
     }
 
-    return () => observer.disconnect()
+    return () => {
+      if (currentElement) {
+        observer.unobserve(currentElement)
+      }
+      observer.disconnect()
+    }
   }, [isInView])
 
   useEffect(() => {
@@ -55,7 +63,7 @@ export function AnimatedCounter({
       // Easing function (ease-out cubic)
       const easeOut = 1 - Math.pow(1 - progress, 3)
       
-      const currentCount = Math.floor(startValue + (value - startValue) * easeOut)
+      const currentCount = Math.floor(startValue + (safeValue - startValue) * easeOut)
       setCount(currentCount)
 
       if (progress < 1) {
@@ -64,7 +72,7 @@ export function AnimatedCounter({
     }
 
     requestAnimationFrame(animate)
-  }, [isInView, value, duration, count])
+  }, [isInView, safeValue, duration, count])
 
   const formatNumber = (num: number): string => {
     if (separator === ",") {

@@ -55,13 +55,34 @@ model User {
   linkedin           String?
   skills             String[]  @default([])
   isAvailableForWork Boolean   @default(false)
+  hourlyRate         Float?
+  availableHours     String[]  @default([]) // Array of available time slots
+  profileViews       Int       @default(0)
+  emailNotifications Boolean   @default(true)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  accounts Account[]
-  sessions Session[]
-  projects Project[]
-  posts    BlogPost[]
+  accounts    Account[]
+  sessions    Session[]
+  projects    Project[]
+  posts       BlogPost[]
+  likes       Like[]
+  comments    Comment[]
+  followers   Follow[]  @relation("UserFollowers")
+  following   Follow[]  @relation("UserFollowing")
+  profileViewLogs ProfileView[] @relation("ProfileOwner")
+  viewedProfiles ProfileView[] @relation("ProfileViewer")
+  reviews     Review[]  @relation("UserReviews")
+  reviewsGiven Review[] @relation("UserReviewsGiven")
+  endorsementsReceived Endorsement[] @relation("UserEndorsements")
+  endorsementsGiven Endorsement[] @relation("EndorsementGiver")
+  testimonialsReceived Testimonial[] @relation("UserTestimonials")
+  testimonialsGiven Testimonial[] @relation("TestimonialGiver")
+  services    Service[]
+  messagesSent Message[] @relation("MessageSender")
+  messagesReceived Message[] @relation("MessageReceiver")
+  collaborationRequestsSent CollaborationRequest[] @relation("RequestSender")
+  collaborationRequestsReceived CollaborationRequest[] @relation("RequestReceiver")
 
   @@map("users")
 }
@@ -86,11 +107,14 @@ model Project {
   githubUrl    String?
   technologies String[] @default([])
   featured     Boolean  @default(false)
+  likesCount   Int      @default(0)
   userId       String   @db.ObjectId
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes    Like[]
+  comments Comment[]
 
   @@map("projects")
 }
@@ -105,11 +129,173 @@ model BlogPost {
   tags        String[] @default([])
   imageUrl    String?
   readingTime Int      @default(1)
+  likesCount  Int      @default(0)
+  userId      String   @db.ObjectId
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes    Like[]
+  comments Comment[]
+
+  @@map("blog_posts")
+}
+model Like {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  projectId String?  @db.ObjectId
+  postId    String?  @db.ObjectId
+  createdAt DateTime @default(now())
+
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  post    BlogPost? @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId], name: "user_project_like")
+  @@unique([userId, postId], name: "user_post_like")
+  @@map("likes")
+}
+
+model Comment {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  content   String
+  userId    String   @db.ObjectId
+  projectId String?  @db.ObjectId
+  postId    String?  @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  post    BlogPost? @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}
+
+model Follow {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  followerId  String   @db.ObjectId
+  followingId String   @db.ObjectId
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("UserFollowers", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId], name: "user_follow")
+  @@map("follows")
+}
+
+model ProfileView {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  viewerId  String?  @db.ObjectId
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user   User  @relation("ProfileOwner", fields: [userId], references: [id], onDelete: Cascade)
+  viewer User? @relation("ProfileViewer", fields: [viewerId], references: [id], onDelete: SetNull)
+
+  @@map("profile_views")
+}
+
+model Review {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  rating    Int      // 1-5 stars
+  comment   String
+  userId    String   @db.ObjectId  // User being reviewed
+  reviewerId String  @db.ObjectId  // User writing the review
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User @relation("UserReviews", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer User @relation("UserReviewsGiven", fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, reviewerId], name: "user_reviewer")
+  @@map("reviews")
+}
+
+model Endorsement {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  skill     String   // The skill being endorsed
+  userId    String   @db.ObjectId  // User being endorsed
+  endorserId String  @db.ObjectId  // User giving endorsement
+  createdAt DateTime @default(now())
+
+  user     User @relation("UserEndorsements", fields: [userId], references: [id], onDelete: Cascade)
+  endorser User @relation("EndorsementGiver", fields: [endorserId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, endorserId, skill], name: "user_endorser_skill")
+  @@map("endorsements")
+}
+
+model Testimonial {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  content     String
+  relationship String   // e.g., "Client", "Colleague", "Manager"
+  companyName String?
+  position    String?
+  approved    Boolean  @default(false)  // Requires approval from profile owner
+  userId      String   @db.ObjectId  // User receiving testimonial
+  authorId    String   @db.ObjectId  // User writing testimonial
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user   User @relation("UserTestimonials", fields: [userId], references: [id], onDelete: Cascade)
+  author User @relation("TestimonialGiver", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("testimonials")
+}
+
+model Service {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String
+  category    String   // e.g., "Web Development", "Mobile App", "Consulting"
+  pricing     String   // e.g., "Fixed", "Hourly", "Project-based"
+  minPrice    Float?
+  maxPrice    Float?
+  duration    String?  // e.g., "1-2 weeks", "1 month"
+  active      Boolean  @default(true)
   userId      String   @db.ObjectId
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("blog_posts")
+  @@map("services")
+}
+
+model Message {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  content    String
+  subject    String?
+  read       Boolean  @default(false)
+  senderId   String   @db.ObjectId
+  receiverId String   @db.ObjectId
+  createdAt  DateTime @default(now())
+
+  sender   User @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model CollaborationRequest {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String
+  projectType String   // e.g., "Open Source", "Freelance", "Partnership"
+  budget      String?
+  timeline    String?
+  status      String   @default("pending")  // "pending", "accepted", "rejected"
+  senderId    String   @db.ObjectId
+  receiverId  String   @db.ObjectId
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sender   User @relation("RequestSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("RequestReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@map("collaboration_requests")
 }

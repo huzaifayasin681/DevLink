@@ -1,9 +1,45 @@
 import { NextRequest, NextResponse } from "next/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { db } from "@/lib/db"
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
+    const current = searchParams.get("current")
+    
+    // Handle current user request
+    if (current === "true") {
+      const session = await getServerSession(authOptions)
+      if (!session?.user?.id) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      }
+      
+      const user = await db.user.findUnique({
+        where: { id: session.user.id },
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          email: true,
+          image: true,
+          bio: true,
+          location: true,
+          website: true,
+          github: true,
+          twitter: true,
+          linkedin: true,
+          skills: true,
+          isAvailableForWork: true,
+          emailNotifications: true,
+          profileViews: true,
+          createdAt: true
+        }
+      })
+      
+      return NextResponse.json({ user })
+    }
+    
     const page = parseInt(searchParams.get("page") || "1")
     const limit = parseInt(searchParams.get("limit") || "12")
     const search = searchParams.get("search") || ""

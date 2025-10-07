@@ -19,7 +19,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { MainLayout } from "@/components/main-layout"
+import { LikeButton } from "@/components/like-button"
+import { CommentsSection } from "@/components/comments-section"
+import { ProfileViewTracker } from "@/components/profile-view-tracker"
 import { formatDate, getInitials } from "@/lib/utils"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 
 interface BlogPostPageProps {
   params: {
@@ -28,7 +33,7 @@ interface BlogPostPageProps {
   }
 }
 
-async function getBlogPost(username: string, slug: string) {
+async function getBlogPost(username: string, slug: string, currentUserId?: string) {
   const { db } = await import("@/lib/db")
   
   // First verify the user exists
@@ -67,9 +72,21 @@ async function getBlogPost(username: string, slug: string) {
   if (!post) {
     return null
   }
+
+  // Check if current user liked this post
+  let isLiked = false
+  if (currentUserId) {
+    const like = await db.like.findFirst({
+      where: {
+        userId: currentUserId,
+        postId: post.id
+      }
+    })
+    isLiked = !!like
+  }
   
   return {
-    post,
+    post: { ...post, isLiked },
     author: post.user
   }
 }
@@ -115,7 +132,8 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
 }
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
-  const data = await getBlogPost(params.username, params.slug)
+  const session = await getServerSession(authOptions)
+  const data = await getBlogPost(params.username, params.slug, session?.user?.id)
 
   if (!data) {
     notFound()
@@ -188,6 +206,12 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                     <Clock className="h-4 w-4" />
                     <span>{post.readingTime} min read</span>
                   </div>
+                  <LikeButton 
+                    postId={post.id}
+                    initialLiked={(post as any).isLiked}
+                    initialCount={post.likesCount}
+                    size="sm"
+                  />
                 </div>
               </div>
 
@@ -310,10 +334,17 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           </CardHeader>
         </Card>
 
+        {/* Comments Section */}
+        <Card>
+          <CardContent className="pt-6">
+            <CommentsSection postId={post.id} />
+          </CardContent>
+        </Card>
+
         {/* Navigation */}
-        <section className="flex justify-between items-center">
+        <section className="flex justify-between items-center mt-8">
           <Button variant="outline" asChild>
-            <Link href={`/${author.username}`}>
+            <Link href={`/${author.username}/blog`}>
               View More Articles
             </Link>
           </Button>
@@ -324,6 +355,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           </Button>
         </section>
       </article>
+      <ProfileViewTracker userId={author.id} />
     </MainLayout>
   )
 }

@@ -7,7 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { MainLayout } from "@/components/main-layout"
+import { LikeButton } from "@/components/like-button"
+import { ProfileViewTracker } from "@/components/profile-view-tracker"
 import { formatDate, getInitials } from "@/lib/utils"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 
 interface BlogPageProps {
   params: {
@@ -15,7 +19,7 @@ interface BlogPageProps {
   }
 }
 
-async function getProfileWithPosts(username: string) {
+async function getProfileWithPosts(username: string, currentUserId?: string) {
   const { db } = await import("@/lib/db")
   
   const user = await db.user.findUnique({
@@ -28,7 +32,26 @@ async function getProfileWithPosts(username: string) {
     }
   })
 
-  return user
+  if (!user) return null
+
+  // Get like status for current user
+  let postsWithLikes = user.posts
+  if (currentUserId) {
+    const likes = await db.like.findMany({
+      where: {
+        userId: currentUserId,
+        postId: { in: user.posts.map(p => p.id) }
+      }
+    })
+    const likedPostIds = new Set(likes.map(l => l.postId))
+    
+    postsWithLikes = user.posts.map(post => ({
+      ...post,
+      isLiked: likedPostIds.has(post.id)
+    }))
+  }
+
+  return { ...user, posts: postsWithLikes }
 }
 
 export async function generateMetadata({ params }: BlogPageProps): Promise<Metadata> {
@@ -60,7 +83,8 @@ export async function generateMetadata({ params }: BlogPageProps): Promise<Metad
 }
 
 export default async function UserBlogPage({ params }: BlogPageProps) {
-  const profile = await getProfileWithPosts(params.username)
+  const session = await getServerSession(authOptions)
+  const profile = await getProfileWithPosts(params.username, session?.user?.id)
 
   if (!profile) {
     notFound()
@@ -145,6 +169,12 @@ export default async function UserBlogPage({ params }: BlogPageProps) {
                           <Clock className="h-4 w-4" />
                           <span>{post.readingTime} min read</span>
                         </div>
+                        <LikeButton 
+                          postId={post.id}
+                          initialLiked={(post as any).isLiked}
+                          initialCount={post.likesCount}
+                          size="sm"
+                        />
                       </div>
                       <CardDescription className="text-base leading-relaxed">
                         {post.excerpt}
@@ -197,6 +227,7 @@ export default async function UserBlogPage({ params }: BlogPageProps) {
           </Card>
         )}
       </div>
+      <ProfileViewTracker userId={profile.id} />
     </MainLayout>
   )
 }

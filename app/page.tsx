@@ -78,50 +78,84 @@ export default async function HomePage() {
   return (
     <MainLayout>
       {/* Hero Section */}
-      <section className="relative py-20 md:py-32">
-        <div className="container">
+      <section className="relative py-20 md:py-32 overflow-hidden">
+        {/* Animated background elements */}
+        <div className="absolute inset-0">
+          <div className="absolute top-20 left-10 w-96 h-96 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-full blur-3xl animate-float" />
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '-3s' }} />
+          <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '-1.5s' }} />
+        </div>
+
+        <div className="container relative">
           <div className="mx-auto max-w-4xl text-center">
             <FadeIn>
-              <Badge variant="secondary" className="mb-4">
+              <Badge variant="secondary" className="mb-4 animate-bounce-in glass-card border-0 hover-glow">
                 ✨ New: Portfolio templates available
               </Badge>
-              <h1 className="text-4xl font-bold tracking-tight sm:text-6xl md:text-7xl bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
-                Connect, Showcase, Inspire
+              <h1 className="text-4xl font-bold tracking-tight sm:text-6xl md:text-7xl animate-slide-up-fade">
+                <span className="bg-gradient-mesh bg-clip-text text-transparent animate-shimmer">
+                  Connect, Showcase, Inspire
+                </span>
               </h1>
-              <p className="mt-6 text-xl leading-8 text-muted-foreground max-w-2xl mx-auto">
-                The ultimate platform for developers to build their professional presence, 
+              <p className="mt-6 text-xl leading-8 text-muted-foreground max-w-2xl mx-auto animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+                The ultimate platform for developers to build their professional presence,
                 showcase amazing projects, and connect with the global tech community.
               </p>
             </FadeIn>
 
             <FadeIn delay={200}>
-              <div className="mt-10 flex items-center justify-center gap-4">
-                <Button size="lg" asChild className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+              <div className="mt-10 flex items-center justify-center gap-6 flex-wrap">
+                <Button
+                  size="lg"
+                  asChild
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 hover:scale-105 transition-all duration-300 rounded-2xl shadow-2xl hover:shadow-blue-500/25 animate-pulse-glow hover-glow group"
+                >
                   <Link href="/login">
-                    Get Started Free <ArrowRight className="ml-2 h-4 w-4" />
+                    <span className="relative z-10">Get Started Free</span>
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
                   </Link>
                 </Button>
-                <Button variant="outline" size="lg" asChild>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  asChild
+                  className="glass-card border-0 hover:scale-105 transition-all duration-300 rounded-2xl hover:shadow-lg hover-lift group"
+                >
                   <Link href="/explore">
-                    Explore Developers
+                    <span className="relative z-10">Explore Developers</span>
                   </Link>
                 </Button>
               </div>
             </FadeIn>
 
             <FadeIn delay={400}>
-              <div className="mt-12 flex items-center justify-center gap-8 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  <AnimatedCounter value={stats.users} suffix={stats.users === 1 ? " Developer" : "+ Developers"} />
+              <div className="mt-16 flex items-center justify-center gap-12 text-sm flex-wrap">
+                <div className="flex items-center gap-3 glass-card px-6 py-3 rounded-2xl hover-lift">
+                  <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl">
+                    <Users className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <AnimatedCounter value={stats.users} suffix={stats.users === 1 ? " Developer" : "+ Developers"} className="font-bold text-foreground" />
+                    <div className="text-xs text-muted-foreground">Active Developers</div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Code2 className="h-4 w-4" />
-                  <AnimatedCounter value={stats.projects} suffix={stats.projects === 1 ? " Project" : "+ Projects"} />
+                <div className="flex items-center gap-3 glass-card px-6 py-3 rounded-2xl hover-lift" style={{ animationDelay: '100ms' }}>
+                  <div className="p-2 bg-gradient-to-r from-green-500 to-blue-500 rounded-xl">
+                    <Code2 className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <AnimatedCounter value={stats.projects} suffix={stats.projects === 1 ? " Project" : "+ Projects"} className="font-bold text-foreground" />
+                    <div className="text-xs text-muted-foreground">Showcased Projects</div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Zap className="h-4 w-4" />
-                  <span>Always Free</span>
+                <div className="flex items-center gap-3 glass-card px-6 py-3 rounded-2xl hover-lift" style={{ animationDelay: '200ms' }}>
+                  <div className="p-2 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl animate-pulse">
+                    <Zap className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <span className="font-bold text-foreground">Always Free</span>
+                    <div className="text-xs text-muted-foreground">No Hidden Costs</div>
+                  </div>
                 </div>
               </div>
             </FadeIn>
@@ -130,23 +164,28 @@ export default async function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-gradient-to-br from-muted/30 via-background to-muted/20 relative overflow-hidden">
-        {/* Background decoration */}
-        <div className="absolute inset-0 bg-grid-pattern opacity-5" />
-        <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-10 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl" />
-        
+      <section className="py-20 relative overflow-hidden">
+        {/* Enhanced background decoration */}
+        <div className="absolute inset-0 bg-grid-pattern opacity-10" />
+        <div className="absolute inset-0">
+          <div className="absolute top-20 left-10 w-96 h-96 bg-gradient-to-r from-blue-500/15 to-cyan-500/15 rounded-full blur-3xl animate-float" />
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-gradient-to-r from-purple-500/15 to-pink-500/15 rounded-full blur-3xl animate-float" style={{ animationDelay: '-2s' }} />
+          <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-gradient-to-r from-green-500/10 to-blue-500/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '-4s' }} />
+        </div>
+
         <div className="container relative">
           <FadeIn>
             <div className="mx-auto max-w-3xl text-center">
-              <Badge variant="secondary" className="mb-4">
+              <Badge variant="secondary" className="mb-6 glass-card border-0 hover-glow animate-bounce-in">
                 🚀 Powerful Features
               </Badge>
-              <h2 className="text-3xl font-bold tracking-tight sm:text-5xl bg-gradient-to-r from-foreground via-foreground to-muted-foreground bg-clip-text text-transparent">
-                Everything you need to showcase your work
+              <h2 className="text-3xl font-bold tracking-tight sm:text-5xl animate-slide-up-fade">
+                <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  Everything you need to showcase your work
+                </span>
               </h2>
-              <p className="mt-6 text-xl text-muted-foreground leading-relaxed">
-                Build a stunning developer profile in minutes with our powerful, 
+              <p className="mt-6 text-xl text-muted-foreground leading-relaxed animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+                Build a stunning developer profile in minutes with our powerful,
                 feature-rich platform designed for modern developers
               </p>
             </div>
@@ -155,84 +194,96 @@ export default async function HomePage() {
           <div className="mx-auto mt-20 max-w-6xl">
             <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
               <FadeIn delay={200}>
-                <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-blue-50/50 to-blue-100/30 dark:from-blue-950/20 dark:to-blue-900/10 hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 hover:-translate-y-2">
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  <CardHeader className="relative">
-                    <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                      <Code2 className="h-7 w-7 text-white" />
+                <Card className="group card-3d glass-card border-0 bg-gradient-to-br from-blue-500/10 via-transparent to-blue-500/5 hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-700 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
+
+                  <CardHeader className="relative p-8">
+                    <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-xl shadow-blue-500/25 animate-float">
+                      <Code2 className="h-8 w-8 text-white" />
                     </div>
-                    <CardTitle className="text-xl group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
+                    <CardTitle className="text-2xl font-bold group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300 mb-3">
                       Project Showcase
                     </CardTitle>
-                    <CardDescription className="text-base leading-relaxed">
-                      Display your best work with rich project pages, live demos, 
+                    <CardDescription className="text-base leading-relaxed text-muted-foreground group-hover:text-foreground/80 transition-colors duration-300">
+                      Display your best work with rich project pages, live demos,
                       interactive previews, and direct source code links
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="relative">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <div className="w-2 h-2 rounded-full bg-blue-500" />
-                      <span>Rich media support</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
-                      <div className="w-2 h-2 rounded-full bg-blue-500" />
-                      <span>Live demo integration</span>
+                  <CardContent className="relative p-8 pt-0">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 text-sm">
+                        <div className="w-3 h-3 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 animate-pulse" />
+                        <span className="text-muted-foreground group-hover:text-foreground transition-colors duration-300">Rich media support</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-sm">
+                        <div className="w-3 h-3 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 animate-pulse" style={{ animationDelay: '0.5s' }} />
+                        <span className="text-muted-foreground group-hover:text-foreground transition-colors duration-300">Live demo integration</span>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
               </FadeIn>
 
               <FadeIn delay={400}>
-                <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-purple-50/50 to-purple-100/30 dark:from-purple-950/20 dark:to-purple-900/10 hover:shadow-2xl hover:shadow-purple-500/10 transition-all duration-500 hover:-translate-y-2">
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  <CardHeader className="relative">
-                    <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                      <Users className="h-7 w-7 text-white" />
+                <Card className="group card-3d glass-card border-0 bg-gradient-to-br from-purple-500/10 via-transparent to-purple-500/5 hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-700 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-pink-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
+
+                  <CardHeader className="relative p-8">
+                    <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-xl shadow-purple-500/25 animate-float" style={{ animationDelay: '-1s' }}>
+                      <Users className="h-8 w-8 text-white" />
                     </div>
-                    <CardTitle className="text-xl group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300">
+                    <CardTitle className="text-2xl font-bold group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300 mb-3">
                       Professional Profile
                     </CardTitle>
-                    <CardDescription className="text-base leading-relaxed">
-                      Create a stunning developer profile with skills showcase, 
+                    <CardDescription className="text-base leading-relaxed text-muted-foreground group-hover:text-foreground/80 transition-colors duration-300">
+                      Create a stunning developer profile with skills showcase,
                       experience timeline, and comprehensive social links
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="relative">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <div className="w-2 h-2 rounded-full bg-purple-500" />
-                      <span>Custom domains</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
-                      <div className="w-2 h-2 rounded-full bg-purple-500" />
-                      <span>SEO optimized</span>
+                  <CardContent className="relative p-8 pt-0">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 text-sm">
+                        <div className="w-3 h-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse" />
+                        <span className="text-muted-foreground group-hover:text-foreground transition-colors duration-300">Custom domains</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-sm">
+                        <div className="w-3 h-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse" style={{ animationDelay: '0.5s' }} />
+                        <span className="text-muted-foreground group-hover:text-foreground transition-colors duration-300">SEO optimized</span>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
               </FadeIn>
 
               <FadeIn delay={600}>
-                <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-green-50/50 to-green-100/30 dark:from-green-950/20 dark:to-green-900/10 hover:shadow-2xl hover:shadow-green-500/10 transition-all duration-500 hover:-translate-y-2">
-                  <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  <CardHeader className="relative">
-                    <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                      <Zap className="h-7 w-7 text-white" />
+                <Card className="group card-3d glass-card border-0 bg-gradient-to-br from-green-500/10 via-transparent to-green-500/5 hover:shadow-2xl hover:shadow-green-500/20 transition-all duration-700 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 to-blue-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
+
+                  <CardHeader className="relative p-8">
+                    <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-xl shadow-green-500/25 animate-float" style={{ animationDelay: '-2s' }}>
+                      <Zap className="h-8 w-8 text-white" />
                     </div>
-                    <CardTitle className="text-xl group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors duration-300">
+                    <CardTitle className="text-2xl font-bold group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors duration-300 mb-3">
                       Blog & Articles
                     </CardTitle>
-                    <CardDescription className="text-base leading-relaxed">
-                      Share your knowledge with the community through our 
+                    <CardDescription className="text-base leading-relaxed text-muted-foreground group-hover:text-foreground/80 transition-colors duration-300">
+                      Share your knowledge with the community through our
                       built-in blogging platform with markdown support
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="relative">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <div className="w-2 h-2 rounded-full bg-green-500" />
-                      <span>Markdown editor</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
-                      <div className="w-2 h-2 rounded-full bg-green-500" />
-                      <span>Syntax highlighting</span>
+                  <CardContent className="relative p-8 pt-0">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 text-sm">
+                        <div className="w-3 h-3 rounded-full bg-gradient-to-r from-green-500 to-blue-500 animate-pulse" />
+                        <span className="text-muted-foreground group-hover:text-foreground transition-colors duration-300">Markdown editor</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-sm">
+                        <div className="w-3 h-3 rounded-full bg-gradient-to-r from-green-500 to-blue-500 animate-pulse" style={{ animationDelay: '0.5s' }} />
+                        <span className="text-muted-foreground group-hover:text-foreground transition-colors duration-300">Syntax highlighting</span>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -313,49 +364,75 @@ export default async function HomePage() {
           <div className="mx-auto mt-16 max-w-6xl">
             {featuredProfiles.length > 0 ? (
               <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-                {featuredProfiles.map((profile) => (
-                  <Card key={profile.id} className="card-hover">
-                    <CardHeader className="text-center">
-                      <Avatar className="h-20 w-20 mx-auto">
-                        <AvatarImage src={profile.image || ""} alt={profile.name || ""} />
-                        <AvatarFallback>{getInitials(profile.name || "")}</AvatarFallback>
-                      </Avatar>
-                      <div className="space-y-1">
-                        <CardTitle>{profile.name}</CardTitle>
-                        <CardDescription>@{profile.username}</CardDescription>
-                      </div>
-                      {profile.isAvailableForWork && (
-                        <Badge variant="success" className="w-fit mx-auto">
-                          Available for work
-                        </Badge>
-                      )}
-                    </CardHeader>
-                    <CardContent className="text-center">
-                      <p className="text-sm text-muted-foreground mb-4">{profile.bio}</p>
-                      <div className="flex flex-wrap justify-center gap-2 mb-4">
-                        {profile.skills.slice(0, 3).map((skill) => (
-                          <Badge key={skill} variant="outline" className="text-xs">
-                            {skill}
-                          </Badge>
-                        ))}
-                        {profile.skills.length > 3 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{profile.skills.length - 3} more
+                {featuredProfiles.map((profile, index) => (
+                  <FadeIn key={profile.id} delay={200 + index * 100}>
+                    <Card className="group card-3d glass-card border-0 hover:shadow-2xl transition-all duration-700 relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
+
+                      <CardHeader className="text-center p-8 relative">
+                        <div className="relative mx-auto mb-6">
+                          <Avatar className="h-24 w-24 mx-auto ring-4 ring-gradient-to-r from-blue-500/20 to-purple-500/20 group-hover:ring-blue-500/40 transition-all duration-300 group-hover:scale-105">
+                            <AvatarImage src={profile.image || ""} alt={profile.name || ""} />
+                            <AvatarFallback className="text-lg font-bold bg-gradient-to-br from-blue-500 to-purple-500 text-white">
+                              {getInitials(profile.name || "")}
+                            </AvatarFallback>
+                          </Avatar>
+                          {profile.isAvailableForWork && (
+                            <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-green-500 rounded-full border-4 border-background animate-pulse" />
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <CardTitle className="text-xl group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
+                            {profile.name}
+                          </CardTitle>
+                          <CardDescription className="font-medium">@{profile.username}</CardDescription>
+                        </div>
+                        {profile.isAvailableForWork && (
+                          <Badge className="w-fit mx-auto bg-gradient-to-r from-green-500 to-blue-500 text-white border-0 animate-pulse">
+                            Available for work
                           </Badge>
                         )}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {profile._count.projects} projects
-                      </div>
-                    </CardContent>
-                    <CardFooter>
-                      <Button variant="outline" className="w-full" asChild>
-                        <Link href={`/${profile.username}`}>
-                          View Profile
-                        </Link>
-                      </Button>
-                    </CardFooter>
-                  </Card>
+                      </CardHeader>
+                      <CardContent className="text-center p-8 pt-0">
+                        <p className="text-sm text-muted-foreground mb-6 leading-relaxed group-hover:text-foreground/80 transition-colors duration-300">
+                          {profile.bio}
+                        </p>
+                        <div className="flex flex-wrap justify-center gap-2 mb-6">
+                          {profile.skills.slice(0, 3).map((skill, skillIndex) => (
+                            <Badge
+                              key={skill}
+                              variant="outline"
+                              className="text-xs hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-purple-500/10 transition-all duration-300"
+                              style={{ animationDelay: `${skillIndex * 100}ms` }}
+                            >
+                              {skill}
+                            </Badge>
+                          ))}
+                          {profile.skills.length > 3 && (
+                            <Badge variant="outline" className="text-xs bg-muted">
+                              +{profile.skills.length - 3} more
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                          <div className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-500" />
+                          <span className="font-medium">{profile._count.projects} projects</span>
+                        </div>
+                      </CardContent>
+                      <CardFooter className="p-8 pt-0">
+                        <Button
+                          variant="outline"
+                          className="w-full group-hover:bg-gradient-to-r group-hover:from-blue-500 group-hover:to-purple-500 group-hover:text-white group-hover:border-transparent transition-all duration-300 rounded-xl hover:scale-105"
+                          asChild
+                        >
+                          <Link href={`/${profile.username}`}>
+                            View Profile
+                          </Link>
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  </FadeIn>
                 ))}
               </div>
             ) : (
@@ -391,28 +468,75 @@ export default async function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600">
-        <div className="container">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              Ready to showcase your work?
-            </h2>
-            <p className="mt-4 text-lg text-blue-100">
-              Join thousands of developers who are building their professional presence with DevLink.
-              It's free and takes less than 5 minutes to get started.
-            </p>
-            <div className="mt-8 flex items-center justify-center gap-4">
-              <Button size="lg" variant="secondary" asChild>
-                <Link href="/login">
-                  Create Your Profile <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline" className="text-white border-white/20 hover:bg-white/10" asChild>
-                <Link href="/explore">
-                  Explore Examples
-                </Link>
-              </Button>
-            </div>
+      <section className="relative py-32 overflow-hidden">
+        {/* Dynamic gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 animate-morphing-bg" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+
+        {/* Particle background */}
+        <div className="absolute inset-0">
+          <div className="absolute top-10 left-10 w-72 h-72 bg-white/10 rounded-full blur-3xl animate-float" />
+          <div className="absolute bottom-10 right-10 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '-3s' }} />
+          <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '-1.5s' }} />
+        </div>
+
+        <div className="container relative">
+          <div className="mx-auto max-w-4xl text-center">
+            <FadeIn>
+              <h2 className="text-4xl font-bold tracking-tight text-white sm:text-6xl mb-6 animate-slide-up-fade">
+                <span className="block">Ready to showcase</span>
+                <span className="block bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent animate-shimmer">
+                  your work?
+                </span>
+              </h2>
+              <p className="text-xl text-blue-50 leading-relaxed max-w-2xl mx-auto animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+                Join thousands of developers who are building their professional presence with DevLink.
+                It's free and takes less than 5 minutes to get started.
+              </p>
+            </FadeIn>
+
+            <FadeIn delay={400}>
+              <div className="mt-12 flex items-center justify-center gap-6 flex-wrap">
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  asChild
+                  className="bg-white/90 text-gray-900 hover:bg-white hover:scale-105 transition-all duration-300 rounded-2xl shadow-2xl hover:shadow-white/25 animate-bounce-in hover-glow group text-lg px-8 py-4"
+                >
+                  <Link href="/login">
+                    <span className="relative z-10 font-semibold">Create Your Profile</span>
+                    <ArrowRight className="ml-3 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
+                  </Link>
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  asChild
+                  className="text-white border-white/30 hover:bg-white/10 hover:scale-105 transition-all duration-300 rounded-2xl backdrop-blur hover:shadow-lg glass-card border-2 text-lg px-8 py-4"
+                >
+                  <Link href="/explore">
+                    <span className="relative z-10 font-semibold">Explore Examples</span>
+                  </Link>
+                </Button>
+              </div>
+            </FadeIn>
+
+            <FadeIn delay={600}>
+              <div className="mt-16 flex items-center justify-center gap-8 text-sm text-blue-100 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                  <span>✨ No credit card required</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" style={{ animationDelay: '0.5s' }} />
+                  <span>🚀 Setup in minutes</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" style={{ animationDelay: '1s' }} />
+                  <span>💎 Always free</span>
+                </div>
+              </div>
+            </FadeIn>
           </div>
         </div>
       </section>

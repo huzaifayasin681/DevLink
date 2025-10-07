@@ -7,8 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { MainLayout } from "@/components/main-layout"
 import { FadeIn } from "@/components/fade-in"
+import { LikeButton } from "@/components/like-button"
+import { ProfileViewTracker } from "@/components/profile-view-tracker"
 import { db } from "@/lib/db"
 import { formatDate } from "@/lib/utils"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 
 interface UserProjectsPageProps {
   params: {
@@ -16,7 +20,7 @@ interface UserProjectsPageProps {
   }
 }
 
-async function getUserProjects(username: string) {
+async function getUserProjects(username: string, currentUserId?: string) {
   try {
     const user = await db.user.findUnique({
       where: { username },
@@ -29,7 +33,27 @@ async function getUserProjects(username: string) {
         }
       }
     })
-    return user
+
+    if (!user) return null
+
+    // Get like status for current user
+    let projectsWithLikes = user.projects
+    if (currentUserId) {
+      const likes = await db.like.findMany({
+        where: {
+          userId: currentUserId,
+          projectId: { in: user.projects.map(p => p.id) }
+        }
+      })
+      const likedProjectIds = new Set(likes.map(l => l.projectId))
+      
+      projectsWithLikes = user.projects.map(project => ({
+        ...project,
+        isLiked: likedProjectIds.has(project.id)
+      }))
+    }
+
+    return { ...user, projects: projectsWithLikes }
   } catch (error) {
     return null
   }
@@ -49,7 +73,8 @@ export async function generateMetadata({ params }: UserProjectsPageProps) {
 }
 
 export default async function UserProjectsPage({ params }: UserProjectsPageProps) {
-  const user = await getUserProjects(params.username)
+  const session = await getServerSession(authOptions)
+  const user = await getUserProjects(params.username, session?.user?.id)
 
   if (!user) {
     notFound()
@@ -123,13 +148,14 @@ export default async function UserProjectsPage({ params }: UserProjectsPageProps
           </div>
         )}
       </div>
+      <ProfileViewTracker userId={user.id} />
     </MainLayout>
   )
 }
 
 function ProjectCard({ project }: { project: any }) {
   return (
-    <Card className="card-hover overflow-hidden">
+    <Card className="card-hover overflow-hidden group">
       {project.imageUrl ? (
         <div className="aspect-video relative">
           <Image
@@ -146,7 +172,14 @@ function ProjectCard({ project }: { project: any }) {
       )}
       
       <CardHeader>
-        <CardTitle className="line-clamp-1">{project.title}</CardTitle>
+        <CardTitle className="line-clamp-1">
+          <Link 
+            href={`/${project.user?.username || 'user'}/projects/${project.id}`}
+            className="hover:text-blue-600 transition-colors"
+          >
+            {project.title}
+          </Link>
+        </CardTitle>
         <CardDescription className="line-clamp-2">
           {project.description}
         </CardDescription>
@@ -167,9 +200,17 @@ function ProjectCard({ project }: { project: any }) {
         </div>
         
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Calendar className="h-3 w-3" />
-            <span>{formatDate(project.createdAt)}</span>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Calendar className="h-3 w-3" />
+              <span>{formatDate(project.createdAt)}</span>
+            </div>
+            <LikeButton 
+              projectId={project.id} 
+              initialLiked={(project as any).isLiked}
+              initialCount={project.likesCount}
+              size="sm"
+            />
           </div>
           
           <div className="flex gap-2">

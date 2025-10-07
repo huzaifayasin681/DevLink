@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { useForm } from "react-hook-form"
@@ -33,26 +33,7 @@ export default function ProfileEditPage() {
   const [showSuggestions, setShowSuggestions] = useState(false)
 
   const skillSuggestions = [
-    // Programming Languages
-    "JavaScript", "TypeScript", "Python", "Java", "C++", "C#", "Go", "Rust", "PHP", "Ruby", "Swift", "Kotlin", "Dart", "Scala", "R", "MATLAB", "Perl", "Lua", "Haskell", "Clojure",
-    // Frontend
-    "React", "Vue.js", "Angular", "Svelte", "Next.js", "Nuxt.js", "HTML", "CSS", "SASS", "SCSS", "Tailwind CSS", "Bootstrap", "Material-UI", "Chakra UI", "Styled Components", "Emotion", "jQuery", "Alpine.js",
-    // Backend
-    "Node.js", "Express.js", "Django", "Flask", "FastAPI", "Spring Boot", "ASP.NET", "Laravel", "Ruby on Rails", "Gin", "Echo", "Fiber", "NestJS", "Koa.js", "Hapi.js",
-    // Databases
-    "MongoDB", "PostgreSQL", "MySQL", "SQLite", "Redis", "Elasticsearch", "Cassandra", "DynamoDB", "Firebase", "Supabase", "PlanetScale", "CockroachDB", "Neo4j", "InfluxDB",
-    // Cloud & DevOps
-    "AWS", "Google Cloud", "Azure", "Docker", "Kubernetes", "Jenkins", "GitLab CI", "GitHub Actions", "CircleCI", "Terraform", "Ansible", "Chef", "Puppet", "Vagrant", "Nginx", "Apache",
-    // Mobile
-    "React Native", "Flutter", "iOS", "Android", "Xamarin", "Ionic", "Cordova", "Unity", "Unreal Engine",
-    // Data Science & AI
-    "Machine Learning", "Deep Learning", "TensorFlow", "PyTorch", "Scikit-learn", "Pandas", "NumPy", "Jupyter", "Apache Spark", "Hadoop", "Kafka", "Airflow", "MLflow", "Kubeflow",
-    // Testing
-    "Jest", "Cypress", "Selenium", "Playwright", "Puppeteer", "Mocha", "Chai", "Jasmine", "PHPUnit", "JUnit", "pytest", "RSpec",
-    // Tools & Others
-    "Git", "GitHub", "GitLab", "Bitbucket", "Jira", "Confluence", "Slack", "Discord", "Figma", "Adobe XD", "Sketch", "Photoshop", "Illustrator", "Blender", "Maya", "3ds Max",
-    // Methodologies
-    "Agile", "Scrum", "Kanban", "DevOps", "CI/CD", "TDD", "BDD", "Microservices", "REST API", "GraphQL", "gRPC", "WebSockets", "OAuth", "JWT", "SOLID Principles", "Design Patterns"
+    "JavaScript", "TypeScript", "Python", "Java", "React", "Node.js", "Next.js", "Vue.js", "Angular", "MongoDB", "PostgreSQL", "MySQL", "AWS", "Docker", "Kubernetes", "Git", "HTML", "CSS", "Tailwind CSS", "Express.js", "Django", "Flask", "Spring Boot", "C++", "C#", "Go", "Rust", "PHP", "Ruby", "Swift", "Kotlin", "Flutter", "React Native", "Firebase", "GraphQL", "REST API", "Redis", "Elasticsearch", "Jenkins", "GitHub Actions", "TensorFlow", "PyTorch", "Machine Learning", "DevOps", "Microservices", "Agile", "Scrum", "Jest", "Cypress", "Figma"
   ]
 
   const {
@@ -75,13 +56,16 @@ export default function ProfileEditPage() {
       linkedin: "",
       skills: [],
       isAvailableForWork: false,
+      hourlyRate: undefined,
+      availableHours: [],
+      emailNotifications: true,
     },
   })
 
   // Fetch user data
   useEffect(() => {
     const fetchUserData = async () => {
-      if (session?.user?.id) {
+      if (session?.user?.id && !userData) {
         try {
           const response = await fetch(`/api/users?current=true`)
           if (response.ok) {
@@ -98,12 +82,16 @@ export default function ProfileEditPage() {
               linkedin: user.linkedin || "",
               skills: user.skills || [],
               isAvailableForWork: user.isAvailableForWork || false,
+              hourlyRate: user.hourlyRate || undefined,
+              availableHours: user.availableHours || [],
+              emailNotifications: user.emailNotifications ?? true,
             }
             setUserData(formData)
             reset(formData)
           }
         } catch (error) {
           console.error('Failed to fetch user data:', error)
+          toast.error('Failed to load profile data')
         }
       }
     }
@@ -111,7 +99,19 @@ export default function ProfileEditPage() {
     if (status === 'authenticated') {
       fetchUserData()
     }
-  }, [session, status, reset])
+  }, [session, status, reset, userData])
+
+  const skills = watch("skills") || []
+  
+  const filteredSuggestions = useMemo(() => {
+    if (!newSkill.trim()) return []
+    return skillSuggestions
+      .filter(skill => 
+        skill.toLowerCase().includes(newSkill.toLowerCase()) && 
+        !skills.includes(skill)
+      )
+      .slice(0, 8)
+  }, [newSkill, skills])
 
   if (status === 'loading' || !userData) {
     return (
@@ -131,8 +131,6 @@ export default function ProfileEditPage() {
     router.push('/login')
     return null
   }
-
-  const skills = watch("skills") || []
 
   const onSubmit = async (data: ProfileFormData) => {
     setIsLoading(true)
@@ -156,13 +154,6 @@ export default function ProfileEditPage() {
       setShowSuggestions(false)
     }
   }
-
-  const filteredSuggestions = skillSuggestions
-    .filter(skill => 
-      skill.toLowerCase().includes(newSkill.toLowerCase()) && 
-      !skills.includes(skill)
-    )
-    .slice(0, 8)
 
   const removeSkill = (skillToRemove: string) => {
     setValue("skills", skills.filter(skill => skill !== skillToRemove), { shouldDirty: true })
@@ -202,7 +193,7 @@ export default function ProfileEditPage() {
           </Button>
           
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+            <div className="rounded-lg bg-primary/10 p-2">
               <User className="h-5 w-5 text-primary" />
             </div>
             <div>
@@ -425,36 +416,81 @@ export default function ProfileEditPage() {
               </CardContent>
             </Card>
 
-            {/* Work Availability */}
+            {/* Work Availability & Notifications */}
             <Card>
               <CardHeader>
-                <CardTitle>Work Availability</CardTitle>
+                <CardTitle>Preferences</CardTitle>
                 <CardDescription>
-                  Let others know if you're open to new opportunities
+                  Manage your work availability and notification settings
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <div className="flex items-center space-x-3">
                   <Switch
                     id="available"
                     checked={watch("isAvailableForWork")}
-                    onCheckedChange={(checked) => 
+                    onCheckedChange={(checked) =>
                       setValue("isAvailableForWork", checked, { shouldDirty: true })
                     }
                   />
                   <Label htmlFor="available" className="whitespace-nowrap">Available for work</Label>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
+                <p className="text-xs text-muted-foreground">
                   This will show a badge on your profile indicating you're open to new opportunities
+                </p>
+
+                <div className="space-y-2 pt-2 border-t">
+                  <Label htmlFor="hourlyRate">Hourly Rate (USD)</Label>
+                  <Input
+                    id="hourlyRate"
+                    type="number"
+                    {...register("hourlyRate", {
+                      valueAsNumber: true,
+                      min: { value: 0, message: "Rate must be positive" }
+                    })}
+                    placeholder="e.g., 50"
+                  />
+                  {errors.hourlyRate && (
+                    <p className="text-sm text-destructive">{errors.hourlyRate.message}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Your standard hourly rate for freelance work
+                  </p>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t">
+                  <Label htmlFor="availableHours">Availability</Label>
+                  <Input
+                    id="availableHours"
+                    {...register("availableHours")}
+                    placeholder="e.g., Weekdays 9-5 PST, Evenings"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    When are you typically available for work?
+                  </p>
+                </div>
+
+                <div className="flex items-center space-x-3 pt-2 border-t">
+                  <Switch
+                    id="emailNotifications"
+                    checked={watch("emailNotifications")}
+                    onCheckedChange={(checked) =>
+                      setValue("emailNotifications", checked, { shouldDirty: true })
+                    }
+                  />
+                  <Label htmlFor="emailNotifications" className="whitespace-nowrap">Email notifications</Label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Receive email notifications for new followers, likes, and comments
                 </p>
               </CardContent>
             </Card>
 
             {/* Danger Zone */}
-            <Card className="border-destructive/50">
+            <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/20">
               <CardHeader>
-                <CardTitle className="text-destructive">Danger Zone</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-red-900 dark:text-red-100">Danger Zone</CardTitle>
+                <CardDescription className="text-red-700 dark:text-red-300">
                   Permanently delete your account and all associated data
                 </CardDescription>
               </CardHeader>
@@ -499,10 +535,10 @@ export default function ProfileEditPage() {
 
           {/* Submit Button */}
           <div className="flex justify-end gap-4 mt-8 pt-6 border-t">
-            <Button type="button" variant="outline" asChild>
+            <Button type="button" variant="outline" asChild className="rounded-lg">
               <Link href="/dashboard">Cancel</Link>
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading} className="rounded-lg">
               {isLoading ? (
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
               ) : (
