@@ -1,6 +1,7 @@
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { ScrollIndicator } from "@/components/scroll-indicator"
+import { PageLoader } from "@/components/page-loader"
 
 interface MainLayoutProps {
   children: React.ReactNode
@@ -9,6 +10,7 @@ interface MainLayoutProps {
 export function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="relative flex min-h-screen flex-col">
+      <PageLoader />
       <ScrollIndicator />
       <Header />
       <main className="flex-1 pt-20">{children}</main>

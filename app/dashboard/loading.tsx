@@ -1,4 +1,4 @@
-import { LoadingSpinner } from "@/components/loading-spinner"
+import { DevLinkLogo } from "@/components/devlink-logo"
 import { MainLayout } from "@/components/main-layout"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 
@@ -99,9 +99,9 @@ export default function DashboardLoading() {
 
         {/* Loading indicator */}
         <div className="fixed bottom-4 right-4">
-          <div className="bg-background border rounded-lg p-3 shadow-lg flex items-center gap-2">
-            <LoadingSpinner size="sm" />
-            <span className="text-sm text-muted-foreground">Loading dashboard...</span>
+          <div className="glass-card p-3 shadow-lg flex items-center gap-3 animate-fade-in">
+            <DevLinkLogo size="sm" />
+            <span className="text-sm font-medium">Loading dashboard...</span>
           </div>
         </div>
       </div>

@@ -244,12 +244,12 @@
 
 @keyframes bounce-in {
   0% {
-    transform: scale(0.3) translate3d(0, 0, 0);
+    transform: scale(0.5) translate3d(0, 0, 0);
     opacity: 0;
   }
-  50% {
-    transform: scale(1.05) translate3d(0, 0, 0);
-    opacity: 0.8;
+  60% {
+    transform: scale(1.03) translate3d(0, 0, 0);
+    opacity: 1;
   }
   100% {
     transform: scale(1) translate3d(0, 0, 0);
@@ -288,6 +288,15 @@
   animation: float 6s ease-in-out infinite;
 }
 
+/* Smooth transitions */
+.transition-smooth {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-smooth-slow {
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .animate-pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
 }
@@ -299,7 +308,7 @@
 }
 
 .animate-bounce-in {
-  animation: bounce-in 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  animation: bounce-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .animate-slide-up-fade {

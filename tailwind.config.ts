@@ -95,8 +95,8 @@ const config: Config = {
           "100%": { backgroundPosition: "200% 0" },
         },
         "bounce-in": {
-          "0%": { transform: "scale(0.3)", opacity: "0" },
-          "50%": { transform: "scale(1.05)", opacity: "0.8" },
+          "0%": { transform: "scale(0.5)", opacity: "0" },
+          "60%": { transform: "scale(1.03)", opacity: "1" },
           "100%": { transform: "scale(1)", opacity: "1" },
         },
         "slide-up-fade": {
@@ -131,7 +131,7 @@ const config: Config = {
         "float": "float 6s ease-in-out infinite",
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
         "shimmer": "shimmer 2s infinite",
-        "bounce-in": "bounce-in 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
+        "bounce-in": "bounce-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
         "slide-up-fade": "slide-up-fade 0.6s ease-out",
         "morphing-bg": "morphing-bg 8s ease-in-out infinite",
         "rotate-gradient": "rotate-gradient 8s linear infinite",

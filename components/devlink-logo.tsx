@@ -1,108 +1,180 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { cn } from "@/lib/utils"
+import React, { useState, useEffect, useRef } from 'react'
 
 interface DevLinkLogoProps {
   className?: string
   size?: "sm" | "md" | "lg"
-  animated?: boolean
 }
 
-export function DevLinkLogo({ className, size = "md", animated = true }: DevLinkLogoProps) {
-  const [displayText, setDisplayText] = useState("DevLink")
-  const [showCursor, setShowCursor] = useState(false)
-  const [phase, setPhase] = useState(0)
-  const [isHovered, setIsHovered] = useState(false)
+export function DevLinkLogo({ className = "", size = "md" }: DevLinkLogoProps) {
+  const [isAssembled, setIsAssembled] = useState<boolean>(false)
+  const [isTextVisible, setIsTextVisible] = useState<boolean>(false)
+  const [isColored, setIsColored] = useState<boolean>(false)
+  const [isPulsing, setIsPulsing] = useState<boolean>(false)
+  const audioContextRef = useRef<AudioContext | null>(null)
 
   const sizes = {
-    sm: { container: "w-24 h-8", text: "text-base" },
-    md: { container: "w-32 h-10", text: "text-xl" },
-    lg: { container: "w-40 h-12", text: "text-2xl" }
-  }
-
-  const playSound = () => {
-    try {
-      const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT')
-      audio.volume = 0.1
-      audio.play().catch(() => {})
-    } catch {}
+    sm: { svg: 32, text: "text-2xl", container: "h-16" },
+    md: { svg: 48, text: "text-5xl", container: "h-24" },
+    lg: { svg: 64, text: "text-6xl", container: "h-32" }
   }
 
   useEffect(() => {
-    if (!isHovered) {
-      setDisplayText("DevLink")
-      setShowCursor(false)
-      setPhase(0)
-      return
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+    }
+  }, [])
+  
+  const playSound = (type: 'swoosh' | 'pop' | 'chime' | 'hover') => {
+    const audioContext = audioContextRef.current
+    if (!audioContext) return
+
+    if (audioContext.state === 'suspended') {
+      audioContext.resume()
     }
 
-    const text = "DevLink"
-    let currentIndex = 0
-
-    // Terminal flicker
-    setTimeout(() => setPhase(1), 100)
+    const oscillator = audioContext.createOscillator()
+    const gainNode = audioContext.createGain()
+    oscillator.connect(gainNode)
+    gainNode.connect(audioContext.destination)
     
-    // Start typing after flicker
-    const typeInterval = setInterval(() => {
-      if (currentIndex <= text.length) {
-        setDisplayText(text.slice(0, currentIndex))
-        if (currentIndex > 0) playSound()
-        currentIndex++
-      } else {
-        clearInterval(typeInterval)
-        setPhase(2)
-        // Hide cursor after typing
-        setTimeout(() => setShowCursor(false), 500)
-      }
-    }, 150)
+    const now = audioContext.currentTime
 
-    // Cursor blink
-    const cursorInterval = setInterval(() => {
-      setShowCursor(prev => !prev)
-    }, 500)
+    switch (type) {
+      case 'swoosh':
+        oscillator.type = 'sine'
+        gainNode.gain.setValueAtTime(0.15, now)
+        oscillator.frequency.setValueAtTime(600, now)
+        oscillator.frequency.exponentialRampToValueAtTime(200, now + 0.15)
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.15)
+        oscillator.start(now)
+        oscillator.stop(now + 0.15)
+        break
+      case 'pop':
+        oscillator.type = 'sine'
+        gainNode.gain.setValueAtTime(0.2, now)
+        oscillator.frequency.setValueAtTime(400, now)
+        oscillator.frequency.exponentialRampToValueAtTime(200, now + 0.08)
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.08)
+        oscillator.start(now)
+        oscillator.stop(now + 0.08)
+        break
+      case 'chime':
+        oscillator.type = 'sine'
+        gainNode.gain.setValueAtTime(0.18, now)
+        oscillator.frequency.setValueAtTime(523.25, now)
+        oscillator.frequency.exponentialRampToValueAtTime(783.99, now + 0.25)
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.35)
+        oscillator.start(now)
+        oscillator.stop(now + 0.35)
+        break
+      case 'hover':
+        oscillator.type = 'sine'
+        gainNode.gain.setValueAtTime(0.08, now)
+        oscillator.frequency.setValueAtTime(300, now)
+        oscillator.frequency.exponentialRampToValueAtTime(400, now + 0.06)
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.06)
+        oscillator.start(now)
+        oscillator.stop(now + 0.06)
+        break
+    }
+  }
+
+  useEffect(() => {
+    const timer1 = setTimeout(() => {
+      setIsAssembled(true)
+      playSound('swoosh')
+    }, 50)
+    const timer2 = setTimeout(() => {
+      setIsTextVisible(true)
+      playSound('pop')
+    }, 400)
+    const timer3 = setTimeout(() => {
+      setIsColored(true)
+      playSound('chime')
+    }, 800)
+    const timer4 = setTimeout(() => setIsPulsing(true), 1100)
 
     return () => {
-      clearInterval(typeInterval)
-      clearInterval(cursorInterval)
+      clearTimeout(timer1)
+      clearTimeout(timer2)
+      clearTimeout(timer3)
+      clearTimeout(timer4)
     }
-  }, [isHovered])
+  }, [])
+
+  const springyEasing = 'cubic-bezier(0.34, 1.56, 0.64, 1)'
 
   return (
     <div 
-      className={cn("relative flex items-center justify-center cursor-pointer", sizes[size].container, className)}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      className={`relative flex items-center justify-center ${sizes[size].container} cursor-pointer group ${className}`}
+      style={{ perspective: '800px' }}
+      onMouseEnter={() => playSound('hover')}
     >
-      {/* Terminal flicker */}
-      {phase >= 1 && (
-        <div className="absolute inset-0 bg-blue-400/20 animate-[flicker_0.3s_ease-out]" />
-      )}
+      <div className="flex items-center justify-center transition-all duration-700 ease-out group-hover:scale-110 group-hover:[transform:rotateY(10deg)]">
+        {/* Left Bracket */}
+        <svg
+          width={sizes[size].svg}
+          height={sizes[size].svg}
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className={`transition-all duration-500 ${isAssembled ? 'translate-x-0 rotate-0 opacity-100' : 'translate-x-[40px] rotate-[135deg] opacity-0'}`}
+          style={{ transitionTimingFunction: springyEasing }}
+        >
+          <path
+            d="M15 6L9 12L15 18"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={`transition-colors duration-500 ${isColored ? 'stroke-blue-500 dark:stroke-blue-400' : 'stroke-gray-600 dark:stroke-gray-400'}`}
+          />
+        </svg>
 
-      {/* Typewriter text */}
-      <div className={cn("relative font-mono font-bold tracking-tight", sizes[size].text)}>
-        {displayText.split("").map((char, i) => (
+        {/* Text part */}
+        <div
+          className={`flex items-baseline font-bold ${sizes[size].text} tracking-tighter overflow-hidden mx-[-10px] ${
+            isTextVisible ? 'animate-bounce-in' : 'opacity-0'
+          }`}
+        >
+          <span className={`transition-colors duration-500 ${isColored ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>Dev</span>
           <span
-            key={i}
-            className={cn(
-              "inline-block",
-              i < 3 ? "text-blue-600 dark:text-blue-400" : "text-purple-600 dark:text-purple-400",
-              phase >= 2 && i >= 3 && "animate-pulse"
-            )}
+            className={`transition-colors duration-500 bg-clip-text text-transparent ${
+              isColored ? 'bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400' : 'bg-gray-500 dark:bg-gray-400'
+            }`}
           >
-            {char}
+            link
           </span>
-        ))}
-        {/* Cursor */}
-        {showCursor && (
-          <span className="inline-block w-0.5 h-full bg-blue-600 dark:bg-blue-400 ml-0.5 animate-pulse" />
-        )}
+        </div>
+
+        {/* Right Bracket */}
+        <svg
+          width={sizes[size].svg}
+          height={sizes[size].svg}
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className={`transition-all duration-500 ${isAssembled ? 'translate-x-0 rotate-0 opacity-100' : 'translate-x-[-40px] -rotate-[135deg] opacity-0'}`}
+          style={{ transitionTimingFunction: springyEasing }}
+        >
+          <path
+            d="M9 18L15 12L9 6"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={`transition-colors duration-500 ${isColored ? 'stroke-blue-500 dark:stroke-blue-400' : 'stroke-gray-600 dark:stroke-gray-400'}`}
+          />
+        </svg>
       </div>
 
-      {/* Glow effect */}
-      {phase >= 2 && (
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-400/10 via-purple-400/10 to-blue-400/10 animate-pulse rounded-lg" />
-      )}
+      {/* Pulse/Glow Effect */}
+      <div
+        className={`absolute w-64 h-24 rounded-full transition-all duration-1000 ease-in-out
+          ${isPulsing ? 'animate-pulse opacity-20 group-hover:opacity-30' : 'opacity-0 scale-50'}
+          ${isColored ? 'bg-blue-500 dark:bg-blue-400' : 'bg-gray-500 dark:bg-gray-400'}`}
+        style={{ filter: 'blur(40px)' }}
+      />
     </div>
   )
 }

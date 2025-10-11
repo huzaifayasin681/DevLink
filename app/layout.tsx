@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { ThemeProvider } from '@/components/theme-provider'
 import { AuthProvider } from '@/components/auth-provider'
+import { LoadingProvider } from '@/components/loading-provider'
 import { Toaster } from 'react-hot-toast'
 import { cn } from '@/lib/utils'
 
@@ -72,22 +73,24 @@ export default function RootLayout({ children }: RootLayoutProps) {
           disableTransitionOnChange
         >
           <AuthProvider>
-            <div className="relative flex min-h-screen flex-col">
-              <div className="flex-1">
-                {children}
+            <LoadingProvider>
+              <div className="relative flex min-h-screen flex-col">
+                <div className="flex-1">
+                  {children}
+                </div>
               </div>
-            </div>
-            <Toaster
-              position="top-right"
-              toastOptions={{
-                duration: 4000,
-                style: {
-                  background: 'var(--card)',
-                  color: 'var(--card-foreground)',
-                  border: '1px solid var(--border)',
-                },
-              }}
-            />
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  duration: 4000,
+                  style: {
+                    background: 'var(--card)',
+                    color: 'var(--card-foreground)',
+                    border: '1px solid var(--border)',
+                  },
+                }}
+              />
+            </LoadingProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>
