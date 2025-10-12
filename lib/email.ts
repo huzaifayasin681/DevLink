@@ -20,14 +20,23 @@ export async function sendEmail({
   html: string
 }) {
   try {
+    console.log('Attempting to send email to:', to)
+    console.log('SMTP Config:', {
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      user: process.env.SMTP_USER,
+      from: process.env.FROM_EMAIL
+    })
     await transporter.sendMail({
       from: process.env.FROM_EMAIL,
       to,
       subject,
       html,
     })
+    console.log('Email sent successfully to:', to)
   } catch (error) {
     console.error('Email send error:', error)
+    throw error
   }
 }
 
