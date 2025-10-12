@@ -104,9 +104,30 @@ export default function AdminDashboard() {
   return (
     <MainLayout>
       <div className="container py-8 max-w-7xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Manage users, developers, and approvals</p>
+        <div className="mb-8 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
+            <p className="text-muted-foreground">Manage users, developers, and approvals</p>
+          </div>
+          <Button onClick={async () => {
+            try {
+              const res = await fetch('/api/test-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: 'follow' })
+              })
+              const data = await res.json()
+              if (res.ok) {
+                toast.success('Test email sent! Check logs and inbox')
+              } else {
+                toast.error(data.error || 'Failed to send test email')
+              }
+            } catch (error) {
+              toast.error('Error sending test email')
+            }
+          }}>
+            Test Email
+          </Button>
         </div>
 
         <div className="grid gap-6 md:grid-cols-4 mb-8">
