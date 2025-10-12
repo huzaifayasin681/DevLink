@@ -4,13 +4,17 @@ import { authOptions } from "@/lib/auth"
 import { sendEmail, emailTemplates } from "@/lib/email"
 
 export async function POST(request: NextRequest) {
+  console.log('=== TEST EMAIL ROUTE CALLED ===')
   try {
     const session = await getServerSession(authOptions)
+    console.log('Session:', session?.user?.email)
     if (!session?.user?.email) {
+      console.log('No session or email')
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const { type } = await request.json()
+    console.log('Email type:', type)
 
     let template
     switch (type) {
@@ -50,18 +54,23 @@ export async function POST(request: NextRequest) {
         }
     }
 
+    console.log('About to send email to:', session.user.email)
     await sendEmail({
       to: session.user.email,
       subject: template.subject,
       html: template.html
     })
+    console.log('Email sent successfully')
 
     return NextResponse.json({ 
       success: true, 
       message: `Test email sent to ${session.user.email}` 
     })
   } catch (error) {
-    console.error("Test email error:", error)
+    console.error("=== TEST EMAIL ERROR ===")
+    console.error("Error:", error)
+    console.error("Error message:", error instanceof Error ? error.message : "Unknown error")
+    console.error("Error stack:", error instanceof Error ? error.stack : "No stack")
     return NextResponse.json({ 
       error: "Failed to send test email",
       details: error instanceof Error ? error.message : "Unknown error"
