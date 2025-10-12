@@ -7,6 +7,7 @@ import { db } from "@/lib/db"
 import { authOptions } from "@/lib/auth"
 import { ProfileFormData, ProjectFormData, BlogPostFormData } from "@/types"
 import { generateSlug, calculateReadingTime } from "@/lib/utils"
+import { sendEmail, emailTemplates } from "@/lib/email"
 
 export async function updateProfile(data: ProfileFormData) {
   const session = await getServerSession(authOptions)
@@ -365,6 +366,30 @@ export async function followUser(targetUserId: string) {
       }
     })
 
+    // Get user details for email notification
+    const [follower, targetUser] = await Promise.all([
+      db.user.findUnique({
+        where: { id: session.user.id },
+        select: { name: true, username: true }
+      }),
+      db.user.findUnique({
+        where: { id: targetUserId },
+        select: { email: true, emailNotifications: true, username: true }
+      })
+    ])
+
+    // Send email notification if user has email notifications enabled
+    if (targetUser?.email && targetUser.emailNotifications && follower?.name) {
+      const profileUrl = `${process.env.NEXTAUTH_URL}/${follower.username || session.user.id}`
+      const template = emailTemplates.newFollower(follower.name, profileUrl)
+
+      await sendEmail({
+        to: targetUser.email,
+        subject: template.subject,
+        html: template.html
+      }).catch(err => console.error('Failed to send follow notification email:', err))
+    }
+
     revalidatePath("/explore")
     return { success: true, follow }
   } catch (error) {
@@ -441,10 +466,54 @@ export async function addComment(data: { content: string; projectId?: string; po
       }
     })
 
+    // Get item details and owner for email notification
+    let itemOwner, itemTitle, itemType, itemUrl
+
     if (data.projectId) {
+      const project = await db.project.findUnique({
+        where: { id: data.projectId },
+        include: {
+          user: {
+            select: { id: true, email: true, emailNotifications: true, username: true }
+          }
+        }
+      })
+      itemOwner = project?.user
+      itemTitle = project?.title || 'project'
+      itemType = 'project'
+      itemUrl = `${process.env.NEXTAUTH_URL}/dashboard/projects/${data.projectId}`
       revalidatePath(`/dashboard/projects/${data.projectId}`)
     } else if (data.postId) {
+      const post = await db.blogPost.findUnique({
+        where: { id: data.postId },
+        include: {
+          user: {
+            select: { id: true, email: true, emailNotifications: true, username: true }
+          }
+        }
+      })
+      itemOwner = post?.user
+      itemTitle = post?.title || 'post'
+      itemType = 'post'
+      itemUrl = `${process.env.NEXTAUTH_URL}/blog/${post?.slug}`
       revalidatePath(`/dashboard/blog/${data.postId}`)
+    }
+
+    // Send email notification if owner is not the commenter and has email notifications enabled
+    if (itemOwner && itemOwner.id !== session.user.id && itemOwner.email && itemOwner.emailNotifications && comment.user.name) {
+      const template = emailTemplates.newComment(
+        comment.user.name,
+        itemTitle,
+        data.content.substring(0, 200) + (data.content.length > 200 ? '...' : ''),
+        itemUrl,
+        itemType
+      )
+
+      await sendEmail({
+        to: itemOwner.email,
+        subject: template.subject,
+        html: template.html
+      }).catch(err => console.error('Failed to send comment notification email:', err))
     }
 
     return { success: true, comment }
@@ -545,9 +614,35 @@ export async function addReview(data: { rating: number; comment: string; userId:
               username: true,
               image: true
             }
+          },
+          user: {
+            select: {
+              id: true,
+              email: true,
+              emailNotifications: true,
+              username: true
+            }
           }
         }
       })
+
+      // Send email notification if user has email notifications enabled (only for new reviews, not updates)
+      if (review.user.email && review.user.emailNotifications && review.reviewer.name) {
+        const profileUrl = `${process.env.NEXTAUTH_URL}/${review.user.username || data.userId}`
+
+        const template = emailTemplates.newReview(
+          review.reviewer.name,
+          data.rating,
+          data.comment,
+          profileUrl
+        )
+
+        await sendEmail({
+          to: review.user.email,
+          subject: template.subject,
+          html: template.html
+        }).catch(err => console.error('Failed to send review notification email:', err))
+      }
 
       return { success: true, review }
     }
@@ -637,9 +732,34 @@ export async function giveEndorsement(data: { userId: string; skill: string }) {
             username: true,
             image: true
           }
+        },
+        user: {
+          select: {
+            id: true,
+            email: true,
+            emailNotifications: true,
+            username: true
+          }
         }
       }
     })
+
+    // Send email notification if user has email notifications enabled
+    if (endorsement.user.email && endorsement.user.emailNotifications && endorsement.endorser.name) {
+      const profileUrl = `${process.env.NEXTAUTH_URL}/${endorsement.user.username || data.userId}`
+
+      const template = emailTemplates.newEndorsement(
+        endorsement.endorser.name,
+        data.skill,
+        profileUrl
+      )
+
+      await sendEmail({
+        to: endorsement.user.email,
+        subject: template.subject,
+        html: template.html
+      }).catch(err => console.error('Failed to send endorsement notification email:', err))
+    }
 
     revalidatePath(`/${data.userId}`)
     return { success: true, endorsement }
@@ -722,9 +842,33 @@ export async function addTestimonial(data: {
             username: true,
             image: true
           }
+        },
+        user: {
+          select: {
+            id: true,
+            email: true,
+            emailNotifications: true
+          }
         }
       }
     })
+
+    // Send email notification if user has email notifications enabled
+    if (testimonial.user.email && testimonial.user.emailNotifications && testimonial.author.name) {
+      const testimonialUrl = `${process.env.NEXTAUTH_URL}/dashboard/testimonials`
+
+      const template = emailTemplates.newTestimonial(
+        testimonial.author.name,
+        data.relationship,
+        testimonialUrl
+      )
+
+      await sendEmail({
+        to: testimonial.user.email,
+        subject: template.subject,
+        html: template.html
+      }).catch(err => console.error('Failed to send testimonial notification email:', err))
+    }
 
     revalidatePath("/dashboard/testimonials")
     return { success: true, testimonial }
@@ -743,7 +887,23 @@ export async function approveTestimonial(testimonialId: string) {
 
   try {
     const testimonial = await db.testimonial.findUnique({
-      where: { id: testimonialId }
+      where: { id: testimonialId },
+      include: {
+        author: {
+          select: {
+            id: true,
+            email: true,
+            emailNotifications: true
+          }
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            username: true
+          }
+        }
+      }
     })
 
     if (!testimonial || testimonial.userId !== session.user.id) {
@@ -755,9 +915,24 @@ export async function approveTestimonial(testimonialId: string) {
       data: { approved: true }
     })
 
+    // Send email notification to author
+    if (testimonial.author.email && testimonial.author.emailNotifications && testimonial.user.name) {
+      const profileUrl = `${process.env.NEXTAUTH_URL}/${testimonial.user.username || session.user.id}`
+
+      const template = emailTemplates.testimonialApproved(
+        testimonial.user.name,
+        profileUrl
+      )
+
+      await sendEmail({
+        to: testimonial.author.email,
+        subject: template.subject,
+        html: template.html
+      }).catch(err => console.error('Failed to send testimonial approved notification email:', err))
+    }
+
     revalidatePath("/dashboard/testimonials")
-    const user = await db.user.findUnique({ where: { id: session.user.id }, select: { username: true } })
-    if (user?.username) revalidatePath(`/${user.username}`)
+    if (testimonial.user.username) revalidatePath(`/${testimonial.user.username}`)
     return { success: true, testimonial: updatedTestimonial }
   } catch (error) {
     console.error("Approve testimonial error:", error)
@@ -952,11 +1127,32 @@ export async function sendMessage(data: {
             id: true,
             name: true,
             username: true,
-            image: true
+            image: true,
+            email: true,
+            emailNotifications: true
           }
         }
       }
     })
+
+    // Send email notification if receiver has email notifications enabled
+    if (message.receiver.email && message.receiver.emailNotifications && message.sender.name) {
+      const messagesUrl = `${process.env.NEXTAUTH_URL}/dashboard/messages`
+      const messagePreview = data.content.substring(0, 150) + (data.content.length > 150 ? '...' : '')
+
+      const template = emailTemplates.newMessage(
+        message.sender.name,
+        data.subject || '',
+        messagePreview,
+        messagesUrl
+      )
+
+      await sendEmail({
+        to: message.receiver.email,
+        subject: template.subject,
+        html: template.html
+      }).catch(err => console.error('Failed to send message notification email:', err))
+    }
 
     revalidatePath("/dashboard/messages")
     return { success: true, message }
@@ -1070,11 +1266,31 @@ export async function sendCollaborationRequest(data: {
             id: true,
             name: true,
             username: true,
-            image: true
+            image: true,
+            email: true,
+            emailNotifications: true
           }
         }
       }
     })
+
+    // Send email notification if receiver has email notifications enabled
+    if (request.receiver.email && request.receiver.emailNotifications && request.sender.name) {
+      const requestUrl = `${process.env.NEXTAUTH_URL}/dashboard/collaborations`
+
+      const template = emailTemplates.collaborationRequest(
+        request.sender.name,
+        data.title,
+        data.description.substring(0, 200) + (data.description.length > 200 ? '...' : ''),
+        requestUrl
+      )
+
+      await sendEmail({
+        to: request.receiver.email,
+        subject: template.subject,
+        html: template.html
+      }).catch(err => console.error('Failed to send collaboration request notification email:', err))
+    }
 
     revalidatePath("/dashboard/collaborations")
     return { success: true, request }
@@ -1093,7 +1309,23 @@ export async function acceptCollaborationRequest(requestId: string) {
 
   try {
     const request = await db.collaborationRequest.findUnique({
-      where: { id: requestId }
+      where: { id: requestId },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            emailNotifications: true
+          }
+        },
+        receiver: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
     })
 
     if (!request || request.receiverId !== session.user.id) {
@@ -1104,6 +1336,23 @@ export async function acceptCollaborationRequest(requestId: string) {
       where: { id: requestId },
       data: { status: "accepted" }
     })
+
+    // Send email notification to sender
+    if (request.sender.email && request.sender.emailNotifications && request.receiver.name) {
+      const dashboardUrl = `${process.env.NEXTAUTH_URL}/dashboard/collaborations`
+
+      const template = emailTemplates.collaborationAccepted(
+        request.receiver.name,
+        request.title,
+        dashboardUrl
+      )
+
+      await sendEmail({
+        to: request.sender.email,
+        subject: template.subject,
+        html: template.html
+      }).catch(err => console.error('Failed to send collaboration accepted notification email:', err))
+    }
 
     revalidatePath("/dashboard/collaborations")
     return { success: true, request: updatedRequest }
@@ -1122,7 +1371,23 @@ export async function rejectCollaborationRequest(requestId: string) {
 
   try {
     const request = await db.collaborationRequest.findUnique({
-      where: { id: requestId }
+      where: { id: requestId },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            emailNotifications: true
+          }
+        },
+        receiver: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
     })
 
     if (!request || request.receiverId !== session.user.id) {
@@ -1133,6 +1398,23 @@ export async function rejectCollaborationRequest(requestId: string) {
       where: { id: requestId },
       data: { status: "rejected" }
     })
+
+    // Send email notification to sender
+    if (request.sender.email && request.sender.emailNotifications && request.receiver.name) {
+      const dashboardUrl = `${process.env.NEXTAUTH_URL}/explore`
+
+      const template = emailTemplates.collaborationRejected(
+        request.receiver.name,
+        request.title,
+        dashboardUrl
+      )
+
+      await sendEmail({
+        to: request.sender.email,
+        subject: template.subject,
+        html: template.html
+      }).catch(err => console.error('Failed to send collaboration rejected notification email:', err))
+    }
 
     revalidatePath("/dashboard/collaborations")
     return { success: true, request: updatedRequest }

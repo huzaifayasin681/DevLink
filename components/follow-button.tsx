@@ -5,6 +5,7 @@ import { UserPlus, UserMinus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSession } from "next-auth/react"
 import { toast } from "react-hot-toast"
+import { useRouter } from "next/navigation"
 
 interface FollowButtonProps {
   userId: string
@@ -18,6 +19,7 @@ export function FollowButton({
   size = "default"
 }: FollowButtonProps) {
   const { data: session } = useSession()
+  const router = useRouter()
   const [following, setFollowing] = useState(initialFollowing)
   const [loading, setLoading] = useState(false)
 
@@ -38,6 +40,7 @@ export function FollowButton({
         const data = await response.json()
         setFollowing(data.following)
         toast.success(data.following ? "Following!" : "Unfollowed")
+        router.refresh()
       } else {
         toast.error("Failed to update follow status")
       }

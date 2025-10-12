@@ -19,6 +19,9 @@ import { getInitials, formatDate } from "@/lib/utils"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 interface UserProfilePageProps {
   params: {
     username: string

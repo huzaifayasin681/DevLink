@@ -69,19 +69,20 @@ export async function POST(request: NextRequest) {
           })
           
           // Send email notification
-          if (project.user.emailNotifications && project.userId !== userId) {
+          if (project.user.email && project.user.emailNotifications && project.userId !== userId) {
             const liker = await db.user.findUnique({ where: { id: userId }, select: { name: true } })
             if (liker?.name) {
               const template = emailTemplates.newLike(
                 liker.name,
                 project.title,
-                `${process.env.NEXTAUTH_URL}/${project.user.username}/projects/${projectId}`
+                `${process.env.NEXTAUTH_URL}/dashboard/projects/${projectId}`,
+                'project'
               )
               await sendEmail({
-                to: project.user.email!,
+                to: project.user.email,
                 subject: template.subject,
                 html: template.html
-              })
+              }).catch(err => console.error('Failed to send like notification email:', err))
             }
           }
         } else if (postId) {
@@ -92,19 +93,20 @@ export async function POST(request: NextRequest) {
           })
           
           // Send email notification
-          if (post.user.emailNotifications && post.userId !== userId) {
+          if (post.user.email && post.user.emailNotifications && post.userId !== userId) {
             const liker = await db.user.findUnique({ where: { id: userId }, select: { name: true } })
             if (liker?.name) {
               const template = emailTemplates.newLike(
                 liker.name,
                 post.title,
-                `${process.env.NEXTAUTH_URL}/${post.user.username}/blog/${post.slug}`
+                `${process.env.NEXTAUTH_URL}/blog/${post.slug}`,
+                'post'
               )
               await sendEmail({
-                to: post.user.email!,
+                to: post.user.email,
                 subject: template.subject,
                 html: template.html
-              })
+              }).catch(err => console.error('Failed to send like notification email:', err))
             }
           }
         }
