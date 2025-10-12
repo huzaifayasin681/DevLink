@@ -19,7 +19,6 @@ export async function GET(request: NextRequest) {
     const result = await sendIncompleteProfileReminders()
 
     return NextResponse.json({
-      success: true,
       message: 'Incomplete profile reminders sent successfully',
       ...result
     })

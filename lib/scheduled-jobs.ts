@@ -11,8 +11,7 @@ export async function sendWeeklyDigests() {
   try {
     const users = await db.user.findMany({
       where: {
-        emailNotifications: true,
-        email: { not: null }
+        emailNotifications: true
       },
       select: {
         id: true,
@@ -129,7 +128,6 @@ export async function sendTestimonialReminders() {
     const usersWithPending = await db.user.findMany({
       where: {
         emailNotifications: true,
-        email: { not: null },
         testimonialsReceived: {
           some: {
             approved: false,
@@ -200,7 +198,6 @@ export async function sendIncompleteProfileReminders() {
     const users = await db.user.findMany({
       where: {
         emailNotifications: true,
-        email: { not: null },
         role: 'developer',
         createdAt: {
           gte: eightDaysAgo,
@@ -294,7 +291,6 @@ export async function sendReEngagementEmails() {
     const inactiveUsers = await db.user.findMany({
       where: {
         emailNotifications: true,
-        email: { not: null },
         updatedAt: { lte: thirtyDaysAgo }
       },
       select: {

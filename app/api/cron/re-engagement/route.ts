@@ -19,7 +19,6 @@ export async function GET(request: NextRequest) {
     const result = await sendReEngagementEmails()
 
     return NextResponse.json({
-      success: true,
       message: 'Re-engagement emails sent successfully',
       ...result
     })

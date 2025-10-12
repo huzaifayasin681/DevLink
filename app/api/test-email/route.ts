@@ -24,7 +24,8 @@ export async function POST(request: NextRequest) {
         template = emailTemplates.newLike(
           "Test User",
           "My Awesome Project",
-          `${process.env.NEXTAUTH_URL}/testuser/projects/123`
+          `${process.env.NEXTAUTH_URL}/testuser/projects/123`,
+          "project"
         )
         break
       case 'comment':
@@ -32,7 +33,8 @@ export async function POST(request: NextRequest) {
           "Test User",
           "My Awesome Project",
           "This is a test comment to verify email notifications are working!",
-          `${process.env.NEXTAUTH_URL}/testuser/projects/123`
+          `${process.env.NEXTAUTH_URL}/testuser/projects/123`,
+          "project"
         )
         break
       default:

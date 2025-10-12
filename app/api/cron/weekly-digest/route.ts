@@ -19,7 +19,6 @@ export async function GET(request: NextRequest) {
     const result = await sendWeeklyDigests()
 
     return NextResponse.json({
-      success: true,
       message: 'Weekly digests sent successfully',
       ...result
     })

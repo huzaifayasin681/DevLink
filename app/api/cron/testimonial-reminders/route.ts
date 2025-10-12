@@ -19,7 +19,6 @@ export async function GET(request: NextRequest) {
     const result = await sendTestimonialReminders()
 
     return NextResponse.json({
-      success: true,
       message: 'Testimonial reminders sent successfully',
       ...result
     })

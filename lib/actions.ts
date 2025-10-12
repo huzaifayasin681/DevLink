@@ -467,7 +467,10 @@ export async function addComment(data: { content: string; projectId?: string; po
     })
 
     // Get item details and owner for email notification
-    let itemOwner, itemTitle, itemType, itemUrl
+    let itemOwner: { id: string; email: string | null; emailNotifications: boolean; username: string | null } | undefined
+    let itemTitle: string = ''
+    let itemType: string = ''
+    let itemUrl: string = ''
 
     if (data.projectId) {
       const project = await db.project.findUnique({

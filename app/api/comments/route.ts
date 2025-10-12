@@ -84,7 +84,8 @@ export async function POST(request: NextRequest) {
           comment.user.name || 'Someone',
           project.title,
           content.trim(),
-          `${process.env.NEXTAUTH_URL}/${project.user.username}/projects/${projectId}`
+          `${process.env.NEXTAUTH_URL}/${project.user.username}/projects/${projectId}`,
+          'project'
         )
         await sendEmail({
           to: project.user.email!,
@@ -103,7 +104,8 @@ export async function POST(request: NextRequest) {
           comment.user.name || 'Someone',
           post.title,
           content.trim(),
-          `${process.env.NEXTAUTH_URL}/${post.user.username}/blog/${post.slug}`
+          `${process.env.NEXTAUTH_URL}/${post.user.username}/blog/${post.slug}`,
+          'blog post'
         )
         await sendEmail({
           to: post.user.email!,

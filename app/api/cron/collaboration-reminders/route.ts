@@ -19,7 +19,6 @@ export async function GET(request: NextRequest) {
     const result = await sendCollaborationRequestReminders()
 
     return NextResponse.json({
-      success: true,
       message: 'Collaboration reminders sent successfully',
       ...result
     })
