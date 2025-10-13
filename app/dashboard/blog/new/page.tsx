@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import Link from "next/link"
-import { ArrowLeft, Save, Eye, Plus, X } from "lucide-react"
+import { ArrowLeft, Save, Eye, Plus, X, Sparkles, Wand2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -34,8 +34,27 @@ const defaultValues: BlogPostFormData = {
 export default function NewBlogPostPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
   const [newTag, setNewTag] = useState("")
   const [activeTab, setActiveTab] = useState("write")
+
+  // Show AI feature toast on mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      toast(
+        "📝 AI Blog Assistant: Generate outlines, improve content, and auto-create tags!",
+        {
+          icon: "✨",
+          duration: 5000,
+          style: {
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            color: "white",
+          },
+        }
+      )
+    }, 1500)
+    return () => clearTimeout(timer)
+  }, [])
 
   const {
     register,
@@ -94,6 +113,107 @@ export default function NewBlogPostPage() {
     }
   }
 
+  const generateOutline = async () => {
+    const topic = watch("title")
+    if (!topic) {
+      toast.error("Please enter a title/topic first")
+      return
+    }
+
+    setIsGenerating(true)
+    try {
+      const res = await fetch("/api/ai/blog-assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "generate-outline", topic }),
+      })
+
+      if (!res.ok) throw new Error("Failed to generate")
+
+      const data = await res.json()
+      setValue("title", data.title, { shouldDirty: true })
+      setValue("excerpt", data.metaDescription, { shouldDirty: true })
+      
+      const outlineContent = `${data.introduction}\n\n${data.sections.map((s: any) => 
+        `## ${s.heading}\n\n${s.points.map((p: string) => `- ${p}`).join("\n")}`
+      ).join("\n\n")}\n\n${data.conclusion}`
+      
+      setValue("content", outlineContent, { shouldDirty: true })
+      setValue("tags", data.tags, { shouldDirty: true })
+      toast.success("Outline generated! Edit and expand it.")
+    } catch (error) {
+      toast.error("Failed to generate outline")
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const improveContent = async () => {
+    const currentContent = watch("content")
+    const currentTitle = watch("title")
+    
+    if (!currentContent || !currentTitle) {
+      toast.error("Please add title and content first")
+      return
+    }
+
+    setIsGenerating(true)
+    try {
+      const res = await fetch("/api/ai/blog-assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          action: "improve-content", 
+          title: currentTitle,
+          content: currentContent 
+        }),
+      })
+
+      if (!res.ok) throw new Error("Failed to improve")
+
+      const data = await res.json()
+      setValue("content", data.content, { shouldDirty: true })
+      toast.success("Content improved!")
+    } catch (error) {
+      toast.error("Failed to improve content")
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const generateTags = async () => {
+    const currentContent = watch("content")
+    const currentTitle = watch("title")
+    
+    if (!currentContent || !currentTitle) {
+      toast.error("Please add title and content first")
+      return
+    }
+
+    setIsGenerating(true)
+    try {
+      const res = await fetch("/api/ai/blog-assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          action: "generate-tags", 
+          title: currentTitle,
+          content: currentContent 
+        }),
+      })
+
+      if (!res.ok) throw new Error("Failed to generate")
+
+      const data = await res.json()
+      setValue("tags", data.tags, { shouldDirty: true })
+      toast.success("Tags generated!")
+    } catch (error) {
+      toast.error("Failed to generate tags")
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
   return (
     <MainLayout>
       <div className="container max-w-6xl py-8">
@@ -146,7 +266,23 @@ export default function NewBlogPostPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="title">Title *</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="title">Title *</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={generateOutline}
+                        disabled={isGenerating || !watch("title")}
+                      >
+                        {isGenerating ? (
+                          <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                        ) : (
+                          <Sparkles className="h-3 w-3 mr-2" />
+                        )}
+                        Generate Outline
+                      </Button>
+                    </div>
                     <Input
                       id="title"
                       {...register("title", { 
@@ -205,10 +341,28 @@ export default function NewBlogPostPage() {
               {/* Content Editor */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Article Content</CardTitle>
-                  <CardDescription>
-                    Write your article using Markdown syntax
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Article Content</CardTitle>
+                      <CardDescription>
+                        Write your article using Markdown syntax
+                      </CardDescription>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={improveContent}
+                      disabled={isGenerating || !watch("content")}
+                    >
+                      {isGenerating ? (
+                        <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                      ) : (
+                        <Wand2 className="h-3 w-3 mr-2" />
+                      )}
+                      Improve
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -296,10 +450,24 @@ const example = 'Hello, world!';
               {/* Tags */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Tags</CardTitle>
-                  <CardDescription>
-                    Add tags to help readers find your article
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Tags</CardTitle>
+                      <CardDescription>
+                        Add tags to help readers find your article
+                      </CardDescription>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={generateTags}
+                      disabled={isGenerating || !watch("content")}
+                    >
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      AI
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">

@@ -8,11 +8,51 @@ export const revalidate = 60 // Revalidate every 60 seconds
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
+    const current = searchParams.get('current')
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
     const skill = searchParams.get('skill')
     const location = searchParams.get('location')
     const available = searchParams.get('available')
+
+    // Handle current user request
+    if (current === 'true') {
+      const { getServerSession } = await import('next-auth')
+      const { authOptions } = await import('@/lib/auth')
+      const session = await getServerSession(authOptions)
+      
+      if (!session?.user?.id) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+
+      const user = await db.user.findUnique({
+        where: { id: session.user.id },
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          email: true,
+          image: true,
+          bio: true,
+          location: true,
+          website: true,
+          github: true,
+          twitter: true,
+          linkedin: true,
+          skills: true,
+          isAvailableForWork: true,
+          hourlyRate: true,
+          availableHours: true,
+          emailNotifications: true,
+        },
+      })
+
+      if (!user) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      }
+
+      return NextResponse.json({ user })
+    }
 
     // Build cache key
     const cacheKey = `users:${limit}:${offset}:${skill}:${location}:${available}`
@@ -75,10 +115,10 @@ export async function GET(request: NextRequest) {
         },
       }
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching users:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch users' },
+      { error: error?.message || 'Failed to fetch users' },
       { status: 500 }
     )
   }

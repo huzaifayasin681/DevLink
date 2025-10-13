@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { MainLayout } from "@/components/main-layout"
 import { FadeIn } from "@/components/fade-in"
 import { AnimatedCounter } from "@/components/animated-counter"
+import { HomeToast } from "@/components/home-toast"
 import { db } from "@/lib/db"
 import { getInitials } from "@/lib/utils"
 
@@ -77,6 +78,7 @@ export default async function HomePage() {
 
   return (
     <MainLayout>
+      <HomeToast />
       {/* Hero Section */}
       <section className="relative py-20 md:py-32 overflow-hidden">
         {/* Animated background elements */}

@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import Link from "next/link"
-import { ArrowLeft, Save, Plus, X } from "lucide-react"
+import { ArrowLeft, Save, Plus, X, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -32,7 +32,26 @@ const defaultValues: ProjectFormData = {
 export default function NewProjectPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
   const [newTechnology, setNewTechnology] = useState("")
+
+  // Show AI feature toast on mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      toast(
+        "✨ Try our AI Generator! Paste a GitHub URL and let AI create your project description.",
+        {
+          icon: "🤖",
+          duration: 5000,
+          style: {
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            color: "white",
+          },
+        }
+      )
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [])
 
   const {
     register,
@@ -75,6 +94,70 @@ export default function NewProjectPage() {
     if (e.key === "Enter") {
       e.preventDefault()
       addTechnology()
+    }
+  }
+
+  const generateDescription = async () => {
+    const githubUrl = watch("githubUrl")
+
+    if (!githubUrl) {
+      toast.error("Please enter a GitHub URL first")
+      return
+    }
+
+    setIsGenerating(true)
+    try {
+      // Extract owner and repo from GitHub URL
+      let cleanUrl = githubUrl.replace("https://github.com/", "").replace("http://github.com/", "")
+      cleanUrl = cleanUrl.replace(".git", "") // Remove .git extension
+      const urlParts = cleanUrl.split("/")
+      
+      if (urlParts.length < 2) {
+        throw new Error("Invalid GitHub URL")
+      }
+
+      const owner = urlParts[0]
+      const repo = urlParts[1]
+
+      // Fetch repo data from GitHub
+      const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`)
+      if (!repoRes.ok) throw new Error("Repository not found")
+      const repoData = await repoRes.json()
+
+      // Fetch languages
+      const langRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/languages`)
+      const languages = langRes.ok ? Object.keys(await langRes.json()).slice(0, 5) : []
+
+      // Generate with AI
+      const res = await fetch("/api/ai/generate-project-description", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectName: repoData.name,
+          technologies: [...languages, ...(repoData.topics || [])],
+          githubUrl,
+          existingDescription: repoData.description,
+        }),
+      })
+
+      if (!res.ok) throw new Error("Failed to generate")
+
+      const data = await res.json()
+      setValue("title", data.title, { shouldDirty: true })
+      setValue("description", data.description, { shouldDirty: true })
+      setValue("liveUrl", repoData.homepage || "", { shouldDirty: true })
+      if (data.tags?.length > 0) {
+        setValue("technologies", data.tags, { shouldDirty: true })
+      }
+      if (data.features?.length > 0) {
+        const featuresText = data.features.map((f: string) => `• ${f}`).join("\n")
+        setValue("content", featuresText, { shouldDirty: true })
+      }
+      toast.success("Project details generated from GitHub!")
+    } catch (error: any) {
+      toast.error(error.message || "Failed to generate description")
+    } finally {
+      setIsGenerating(false)
     }
   }
 
@@ -196,7 +279,23 @@ export default function NewProjectPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="githubUrl">GitHub Repository</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="githubUrl">GitHub Repository</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={generateDescription}
+                        disabled={isGenerating || !watch("githubUrl")}
+                      >
+                        {isGenerating ? (
+                          <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                        ) : (
+                          <Sparkles className="h-3 w-3 mr-2" />
+                        )}
+                        {isGenerating ? "Generating..." : "AI Generate"}
+                      </Button>
+                    </div>
                     <Input
                       id="githubUrl"
                       {...register("githubUrl", {
@@ -207,6 +306,9 @@ export default function NewProjectPage() {
                     {errors.githubUrl && (
                       <p className="text-sm text-destructive">{errors.githubUrl.message}</p>
                     )}
+                    <p className="text-xs text-muted-foreground">
+                      💡 Add GitHub URL and click AI Generate to auto-fill everything
+                    </p>
                   </div>
                 </div>
               </CardContent>

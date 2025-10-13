@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { useForm } from "react-hook-form"
-import { User, ArrowLeft, Save } from "lucide-react"
+import { User, ArrowLeft, Save, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -27,10 +27,30 @@ export default function ProfileEditPage() {
   const { data: session, status } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isGeneratingBio, setIsGeneratingBio] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [newSkill, setNewSkill] = useState("")
   const [userData, setUserData] = useState<ProfileFormData | null>(null)
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [bioOptions, setBioOptions] = useState<{short: string, medium: string, long: string} | null>(null)
+
+  // Show AI feature toast on mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      toast(
+        "🤖 AI Bio Generator: Click 'AI Generate' to create a professional bio from your GitHub!",
+        {
+          icon: "✨",
+          duration: 5000,
+          style: {
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            color: "white",
+          },
+        }
+      )
+    }, 1500)
+    return () => clearTimeout(timer)
+  }, [])
 
   const skillSuggestions = [
     "JavaScript", "TypeScript", "Python", "Java", "React", "Node.js", "Next.js", "Vue.js", "Angular", "MongoDB", "PostgreSQL", "MySQL", "AWS", "Docker", "Kubernetes", "Git", "HTML", "CSS", "Tailwind CSS", "Express.js", "Django", "Flask", "Spring Boot", "C++", "C#", "Go", "Rust", "PHP", "Ruby", "Swift", "Kotlin", "Flutter", "React Native", "Firebase", "GraphQL", "REST API", "Redis", "Elasticsearch", "Jenkins", "GitHub Actions", "TensorFlow", "PyTorch", "Machine Learning", "DevOps", "Microservices", "Agile", "Scrum", "Jest", "Cypress", "Figma"
@@ -181,6 +201,41 @@ export default function ProfileEditPage() {
     }
   }
 
+  const generateBio = async () => {
+    const githubUrl = watch("github")
+    const githubUsername = githubUrl?.split("github.com/")[1]?.split("/")[0]
+
+    setIsGeneratingBio(true)
+    try {
+      const res = await fetch("/api/ai/generate-bio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ githubUsername }),
+      })
+
+      if (!res.ok) throw new Error("Failed to generate")
+
+      const data = await res.json()
+      setBioOptions(data)
+      if (data.suggestedSkills?.length > 0) {
+        const currentSkills = watch("skills") || []
+        const newSkills = [...new Set([...currentSkills, ...data.suggestedSkills])]
+        setValue("skills", newSkills, { shouldDirty: true })
+      }
+      toast.success("Bio generated! Choose a version below.")
+    } catch (error) {
+      toast.error("Failed to generate bio")
+    } finally {
+      setIsGeneratingBio(false)
+    }
+  }
+
+  const selectBio = (bioText: string) => {
+    setValue("bio", bioText, { shouldDirty: true })
+    setBioOptions(null)
+    toast.success("Bio applied!")
+  }
+
   return (
     <MainLayout>
       <div className="container max-w-2xl py-8">
@@ -250,11 +305,27 @@ export default function ProfileEditPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="bio">Bio</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="bio">Bio</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={generateBio}
+                      disabled={isGeneratingBio}
+                    >
+                      {isGeneratingBio ? (
+                        <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                      ) : (
+                        <Sparkles className="h-3 w-3 mr-2" />
+                      )}
+                      {isGeneratingBio ? "Generating..." : "AI Generate"}
+                    </Button>
+                  </div>
                   <Textarea
                     id="bio"
                     {...register("bio", {
-                      maxLength: { value: 500, message: "Bio must be less than 500 characters" }
+                      maxLength: { value: 5000, message: "Bio must be less than 5000 characters" }
                     })}
                     placeholder="Tell us about yourself..."
                     rows={4}
@@ -263,8 +334,36 @@ export default function ProfileEditPage() {
                     <p className="text-sm text-destructive">{errors.bio.message}</p>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    {watch("bio")?.length || 0}/500 characters
+                    {watch("bio")?.length || 0}/5000 characters
                   </p>
+                  {bioOptions && (
+                    <div className="space-y-2 p-3 bg-muted rounded-lg">
+                      <p className="text-sm font-medium">Choose a bio version:</p>
+                      <div className="space-y-2">
+                        <button
+                          type="button"
+                          onClick={() => selectBio(bioOptions.short)}
+                          className="w-full text-left p-2 text-sm bg-background hover:bg-accent rounded border"
+                        >
+                          <span className="font-medium">Short:</span> {bioOptions.short}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => selectBio(bioOptions.medium)}
+                          className="w-full text-left p-2 text-sm bg-background hover:bg-accent rounded border"
+                        >
+                          <span className="font-medium">Medium:</span> {bioOptions.medium}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => selectBio(bioOptions.long)}
+                          className="w-full text-left p-2 text-sm bg-background hover:bg-accent rounded border"
+                        >
+                          <span className="font-medium">Long:</span> {bioOptions.long}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">

@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
           
           // Fetch README
           let readmeContent = ''
+          let aiGeneratedDescription = ''
           try {
             const readmeRes = await fetch(`https://api.github.com/repos/${repo.full_name}/readme`, {
               headers: {
@@ -57,6 +58,29 @@ export async function POST(request: NextRequest) {
             })
             if (readmeRes.ok) {
               readmeContent = await readmeRes.text()
+              
+              // Generate AI description from README
+              if (process.env.GEMINI_API_KEY) {
+                try {
+                  const { generateContent } = await import('@/lib/gemini')
+                  const prompt = `Analyze this GitHub repository and create a compelling portfolio description.
+
+Repository: ${repo.name}
+Description: ${repo.description || 'No description'}
+Language: ${repo.language || 'Not specified'}
+Stars: ${repo.stargazers_count}
+
+README Content:
+${readmeContent.substring(0, 2000)}
+
+Generate a professional 2-3 sentence description for a developer portfolio (max 150 words).`
+                  
+                  const aiResponse = await generateContent(prompt)
+                  aiGeneratedDescription = aiResponse || ''
+                } catch (aiError) {
+                  console.error('AI generation failed:', aiError)
+                }
+              }
             }
           } catch (e) {
             console.log('No README found')
@@ -175,7 +199,7 @@ ${repo.license ? repo.license.name : 'No license specified'}
           const project = await db.project.create({
             data: {
               title: repo.name.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
-              description: repo.description || `A ${repo.language || 'software'} project with ${repo.stargazers_count} stars on GitHub`,
+              description: aiGeneratedDescription || repo.description || `A ${repo.language || 'software'} project with ${repo.stargazers_count} stars on GitHub`,
               content: projectContent,
               imageUrl: imageUrl,
               githubUrl: repo.html_url,

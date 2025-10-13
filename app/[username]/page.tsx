@@ -14,6 +14,7 @@ import { EndorsementsSection } from "@/components/profile/endorsements-section"
 import { TestimonialsSection } from "@/components/profile/testimonials-section"
 import { ServicesSection } from "@/components/profile/services-section"
 import { CollaborationRequests } from "@/components/collaboration/collaboration-requests"
+import DeveloperChatbot from "@/components/developer-chatbot"
 import { db } from "@/lib/db"
 import { getInitials, formatDate } from "@/lib/utils"
 import { getServerSession } from "next-auth"
@@ -49,7 +50,15 @@ async function getUserProfile(username: string, currentUserId?: string) {
                 image: true
               }
             },
-            project: true
+            project: {
+              select: {
+                id: true,
+                title: true,
+                description: true,
+                liveUrl: true,
+                githubUrl: true
+              }
+            }
           },
           orderBy: { updatedAt: 'desc' },
           take: 6
@@ -588,6 +597,9 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
         </div>
       </div>
       <ProfileViewTracker userId={user.id} />
+      {user.role === "developer" && user.github && (
+        <DeveloperChatbot username={user.github.split("/").pop() || user.username || ""} />
+      )}
     </MainLayout>
   )
 }
